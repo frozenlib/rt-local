@@ -36,9 +36,9 @@ pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>)
     message_loop.run(|| loop {
         requests.swap(&mut reqs);
         Runtime::with(|rt| {
-            for task in rt.tasks_new.drain(..) {
+            for fut in rt.futs_new.drain(..) {
                 reqs.wakes.push(runners.insert_with_key(|id| {
-                    TaskRunner::new(TaskWake::new(message_loop.waker(), id, &requests), task)
+                    TaskRunner::new(TaskWake::new(message_loop.waker(), id, &requests), fut)
                 }));
             }
         });
@@ -70,8 +70,8 @@ pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>)
 }
 pub fn spawn_local(fut: impl Future<Output = ()> + 'static) {
     Runtime::with(|rt| {
-        let need_wake = rt.tasks_new.is_empty();
-        rt.tasks_new.push(Box::pin(fut));
+        let need_wake = rt.futs_new.is_empty();
+        rt.futs_new.push(Box::pin(fut));
         if need_wake {
             rt.waker.wake();
         }
@@ -125,14 +125,14 @@ impl RawRequests {
 
 struct Runtime {
     waker: Box<dyn MessageLoopWaker>,
-    tasks_new: Vec<LocalBoxFuture<'static, ()>>,
+    futs_new: Vec<LocalBoxFuture<'static, ()>>,
 }
 
 impl Runtime {
     fn new(waker: Box<dyn MessageLoopWaker>) -> Self {
         Self {
             waker,
-            tasks_new: Vec::new(),
+            futs_new: Vec::new(),
         }
     }
     fn enter(waker: Box<dyn MessageLoopWaker>) {
@@ -158,13 +158,13 @@ impl Runtime {
 struct TaskRunner<W: MessageLoopWaker>(Option<RawTaskRunner<W>>);
 
 impl<W: MessageLoopWaker> TaskRunner<W> {
-    fn new(wake: Arc<TaskWake<W>>, task: LocalBoxFuture<'static, ()>) -> Self {
-        Self(Some(RawTaskRunner { wake, task }))
+    fn new(wake: Arc<TaskWake<W>>, fut: LocalBoxFuture<'static, ()>) -> Self {
+        Self(Some(RawTaskRunner { wake, fut }))
     }
     fn run(&mut self) {
         if let Some(task) = &mut self.0 {
             if task
-                .task
+                .fut
                 .as_mut()
                 .poll(&mut Context::from_waker(&task.wake.waker()))
                 .is_ready()
@@ -177,7 +177,7 @@ impl<W: MessageLoopWaker> TaskRunner<W> {
 
 struct RawTaskRunner<W: MessageLoopWaker> {
     wake: Arc<TaskWake<W>>,
-    task: LocalBoxFuture<'static, ()>,
+    fut: LocalBoxFuture<'static, ()>,
 }
 
 struct TaskWake<W: MessageLoopWaker> {
