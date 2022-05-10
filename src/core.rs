@@ -30,15 +30,15 @@ pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>)
     requests.push_wake(fut_id);
 
     let mut reqs = RawRequests::new();
-    let mut tasks = SlabMap::new();
+    let mut runners = SlabMap::new();
     let mut result = None;
 
     message_loop.run(|| loop {
         requests.swap(&mut reqs);
         Runtime::with(|rt| {
             for task in rt.tasks_new.drain(..) {
-                reqs.wakes.push(tasks.insert_with_key(|id| {
-                    Task::new(TaskWake::new(message_loop.waker(), id, &requests), task)
+                reqs.wakes.push(runners.insert_with_key(|id| {
+                    TaskRunner::new(TaskWake::new(message_loop.waker(), id, &requests), task)
                 }));
             }
         });
@@ -58,11 +58,11 @@ pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>)
                     Poll::Pending => {}
                 }
             } else {
-                tasks[id].run();
+                runners[id].run();
             }
         }
         for id in reqs.drops.drain(..) {
-            tasks.remove(id);
+            runners.remove(id);
         }
     });
     Runtime::leave();
@@ -155,18 +155,18 @@ impl Runtime {
         })
     }
 }
-struct Task<W: MessageLoopWaker>(Option<RawTask<W>>);
+struct TaskRunner<W: MessageLoopWaker>(Option<RawTaskRunner<W>>);
 
-impl<W: MessageLoopWaker> Task<W> {
-    fn new(waker: Arc<TaskWake<W>>, task: LocalBoxFuture<'static, ()>) -> Self {
-        Self(Some(RawTask { waker, task }))
+impl<W: MessageLoopWaker> TaskRunner<W> {
+    fn new(wake: Arc<TaskWake<W>>, task: LocalBoxFuture<'static, ()>) -> Self {
+        Self(Some(RawTaskRunner { wake, task }))
     }
     fn run(&mut self) {
         if let Some(task) = &mut self.0 {
             if task
                 .task
                 .as_mut()
-                .poll(&mut Context::from_waker(&task.waker.waker()))
+                .poll(&mut Context::from_waker(&task.wake.waker()))
                 .is_ready()
             {
                 self.0.take();
@@ -175,8 +175,8 @@ impl<W: MessageLoopWaker> Task<W> {
     }
 }
 
-struct RawTask<W: MessageLoopWaker> {
-    waker: Arc<TaskWake<W>>,
+struct RawTaskRunner<W: MessageLoopWaker> {
+    wake: Arc<TaskWake<W>>,
     task: LocalBoxFuture<'static, ()>,
 }
 
