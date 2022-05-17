@@ -2,7 +2,6 @@ use crate::{MessageLoop, MessageLoopWaker};
 use std::sync::{Arc, Condvar, Mutex};
 
 pub struct EmptyMessageLoop(Arc<Waker>);
-pub struct EmptyMessageLoopWaker(Arc<Waker>);
 
 struct Waker {
     is_wake: Mutex<bool>,
@@ -25,10 +24,8 @@ impl Default for EmptyMessageLoop {
 }
 
 impl MessageLoop for EmptyMessageLoop {
-    type Waker = EmptyMessageLoopWaker;
-
-    fn waker(&self) -> Self::Waker {
-        EmptyMessageLoopWaker(self.0.clone())
+    fn waker(&self) -> Arc<dyn MessageLoopWaker> {
+        self.0.clone()
     }
 
     fn run(&self, mut f: impl FnMut() -> bool) {
@@ -48,12 +45,12 @@ impl MessageLoop for EmptyMessageLoop {
     }
 }
 
-impl MessageLoopWaker for EmptyMessageLoopWaker {
+impl MessageLoopWaker for Waker {
     fn wake(&self) {
-        let mut is_wake = self.0.is_wake.lock().unwrap();
+        let mut is_wake = self.is_wake.lock().unwrap();
         if !*is_wake {
             *is_wake = true;
-            self.0.cv.notify_all();
+            self.cv.notify_all();
         }
     }
 }

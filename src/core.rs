@@ -15,15 +15,14 @@ const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
 pub trait MessageLoop {
-    type Waker: MessageLoopWaker;
-    fn waker(&self) -> Self::Waker;
+    fn waker(&self) -> Arc<dyn MessageLoopWaker>;
     fn run(&self, f: impl FnMut() -> bool);
 }
 pub trait MessageLoopWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>) -> T {
-    let requests = Requests::new(Box::new(message_loop.waker()));
+    let requests = Requests::new(message_loop.waker());
     Runtime::enter(&requests);
     let mut fut = unsafe { Pin::new_unchecked(&mut fut) };
     let fut_id = ID_MAIN;
@@ -97,7 +96,7 @@ thread_local! {
 struct Requests(Arc<RequestsData>);
 
 impl Requests {
-    fn new(waker: Box<dyn MessageLoopWaker>) -> Self {
+    fn new(waker: Arc<dyn MessageLoopWaker>) -> Self {
         Self(Arc::new(RequestsData {
             reqs: Mutex::new(RawRequests::new()),
             waker,
@@ -124,7 +123,7 @@ impl Requests {
     }
 }
 struct RequestsData {
-    waker: Box<dyn MessageLoopWaker>,
+    waker: Arc<dyn MessageLoopWaker>,
     reqs: Mutex<RawRequests>,
 }
 
