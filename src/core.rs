@@ -21,13 +21,12 @@ pub trait MessageLoop {
 pub trait MessageLoopWaker: 'static + Send + Sync {
     fn wake(&self);
 }
-pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>) -> T {
+pub fn run<T>(message_loop: &impl MessageLoop, mut main: impl Future<Output = T>) -> T {
     let requests = Requests::new(message_loop.waker());
     Runtime::enter(&requests);
-    let mut fut = unsafe { Pin::new_unchecked(&mut fut) };
-    let fut_id = ID_MAIN;
-    let fut_wake = TaskWake::new(fut_id, &requests);
-    requests.push_wake(fut_id);
+    let mut main = unsafe { Pin::new_unchecked(&mut main) };
+    let main_wake = TaskWake::new(ID_MAIN, &requests);
+    requests.push_wake(ID_MAIN);
 
     let mut reqs = RawRequests::new();
     let mut rs = SlabMap::new();
@@ -45,10 +44,10 @@ pub fn run<T>(message_loop: &impl MessageLoop, mut fut: impl Future<Output = T>)
             return true;
         }
         for id in reqs.wakes.drain(..) {
-            if id == fut_id {
-                match fut
+            if id == ID_MAIN {
+                match main
                     .as_mut()
-                    .poll(&mut Context::from_waker(&fut_wake.waker()))
+                    .poll(&mut Context::from_waker(&main_wake.waker()))
                 {
                     Poll::Ready(value) => {
                         result = Some(value);
