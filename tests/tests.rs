@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_std::task::sleep;
-use msgloop::*;
+use rt_local::*;
 
 #[test]
 fn test_run() {
