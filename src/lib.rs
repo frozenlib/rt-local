@@ -1,5 +1,5 @@
 mod core;
-mod empty_message_loop;
+mod unit_main_loop;
 
-pub use crate::core::{run, spawn_local, MessageLoop, MessageLoopWaker, Task};
-pub use crate::empty_message_loop::EmptyMessageLoop;
+pub use crate::core::{run, spawn_local, MainLoop, RuntimeWaker, Task};
+pub use crate::unit_main_loop::UnitMainLoop;

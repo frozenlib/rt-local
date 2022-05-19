@@ -14,14 +14,14 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait MessageLoop {
-    fn waker(&self) -> Arc<dyn MessageLoopWaker>;
+pub trait MainLoop {
+    fn waker(&self) -> Arc<dyn RuntimeWaker>;
     fn run(&self, f: impl FnMut() -> bool);
 }
-pub trait MessageLoopWaker: 'static + Send + Sync {
+pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
-pub fn run<T>(message_loop: &impl MessageLoop, mut main: impl Future<Output = T>) -> T {
+pub fn run<T>(message_loop: &impl MainLoop, mut main: impl Future<Output = T>) -> T {
     let requests = Requests::new(message_loop.waker());
     Runtime::enter(&requests);
     let mut main = unsafe { Pin::new_unchecked(&mut main) };
@@ -95,7 +95,7 @@ thread_local! {
 struct Requests(Arc<RequestsData>);
 
 impl Requests {
-    fn new(waker: Arc<dyn MessageLoopWaker>) -> Self {
+    fn new(waker: Arc<dyn RuntimeWaker>) -> Self {
         Self(Arc::new(RequestsData {
             reqs: Mutex::new(RawRequests::new()),
             waker,
@@ -122,7 +122,7 @@ impl Requests {
     }
 }
 struct RequestsData {
-    waker: Arc<dyn MessageLoopWaker>,
+    waker: Arc<dyn RuntimeWaker>,
     reqs: Mutex<RawRequests>,
 }
 
