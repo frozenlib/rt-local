@@ -15,7 +15,7 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait RuntimeBackend {
+pub trait RuntimeBackend: 'static {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
 }
 pub trait RuntimeLoop {
@@ -28,7 +28,7 @@ pub trait RuntimeWaker: 'static + Send + Sync {
 }
 
 pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
-    let mut runner = Runner::new(l.waker());
+    let mut runner = Runner::new(l.waker(), None);
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
@@ -66,17 +66,18 @@ thread_local! {
 }
 
 pub fn enter(backend: impl RuntimeBackend) {
-    let runner = Runner::new(backend.waker());
+    let runner = Runner::new(backend.waker(), Some(Box::new(backend)));
     Runtime::enter(&runner.rc);
     RUNNER.with(|r| *r.borrow_mut() = Some(runner));
 }
 pub fn leave() {
-    RUNNER.with(|r| {
-        if r.borrow_mut().take().is_none() {
-            panic!("runtime backend is not exists")
-        }
+    let runner = RUNNER.with(|r| {
+        r.borrow_mut()
+            .take()
+            .expect("runtime backend is not exists")
     });
     Runtime::leave();
+    drop(runner);
 }
 pub fn on_step() {
     RUNNER.with(|r| {
@@ -346,14 +347,16 @@ struct Runner {
     rc: RequestChannel,
     reqs: RawRequests,
     rs: SlabMap<Option<Runnable>>,
+    _backend: Option<Box<dyn RuntimeBackend>>,
 }
 
 impl Runner {
-    fn new(waker: Arc<dyn RuntimeWaker>) -> Self {
+    fn new(waker: Arc<dyn RuntimeWaker>, backend: Option<Box<dyn RuntimeBackend>>) -> Self {
         Self {
             rc: RequestChannel::new(waker),
             reqs: RawRequests::new(),
             rs: SlabMap::new(),
+            _backend: backend,
         }
     }
     fn ready_requests(&mut self) -> bool {
