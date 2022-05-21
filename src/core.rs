@@ -78,12 +78,7 @@ impl<F: Future> RuntimeCallback for &mut RunCallback<F> {
     }
 
     fn on_idle(&mut self) -> bool {
-        if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
-            on_idle.wake();
-            true
-        } else {
-            false
-        }
+        on_idle()
     }
 }
 
@@ -104,13 +99,21 @@ pub fn leave() {
     });
     Runtime::leave();
 }
-pub fn step() {
+pub fn on_step() {
     RUNNER.with(|r| {
         r.borrow_mut()
             .as_mut()
             .expect("runtime backend is not exists")
             .step()
     });
+}
+pub fn on_idle() -> bool {
+    if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
+        on_idle.wake();
+        true
+    } else {
+        false
+    }
 }
 
 #[must_use]
