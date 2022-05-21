@@ -18,7 +18,7 @@ const ID_MAIN: usize = usize::MAX - 1;
 pub trait RuntimeBackend {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
 }
-pub trait RuntimeMainLoop {
+pub trait RuntimeLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
     fn run(&self, on_step: impl FnMut() -> bool);
 }
@@ -27,15 +27,15 @@ pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 
-pub fn run<T>(main_loop: &impl RuntimeMainLoop, f: impl Future<Output = T>) -> T {
-    let mut runner = Runner::new(main_loop.waker());
+pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
+    let mut runner = Runner::new(l.waker());
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
     let mut main = Box::pin(f);
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     let mut result = None;
-    main_loop.run(|| {
+    l.run(|| {
         while runner.ready_requests() {
             for id in runner.reqs.wakes.drain(..) {
                 if id == ID_MAIN {

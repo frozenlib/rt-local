@@ -1,4 +1,4 @@
-use crate::runtime::{on_idle, RuntimeMainLoop, RuntimeWaker};
+use crate::runtime::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::sync::{Arc, Condvar, Mutex};
 
 pub struct MainLoop(Arc<Waker>);
@@ -23,7 +23,7 @@ impl Default for MainLoop {
     }
 }
 
-impl RuntimeMainLoop for MainLoop {
+impl RuntimeLoop for MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }
