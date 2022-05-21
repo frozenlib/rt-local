@@ -37,7 +37,7 @@ pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
     let mut result = None;
     l.run(|| {
         while runner.ready_requests() {
-            for id in runner.reqs.wakes.drain(..) {
+            for id in runner.wakes.drain(..) {
                 if id == ID_MAIN {
                     match main
                         .as_mut()
@@ -145,8 +145,10 @@ impl RequestChannel {
             waker,
         }))
     }
-    fn swap(&self, reqs: &mut RawRequests) {
-        swap(reqs, &mut *self.0.reqs.lock().unwrap())
+    fn swap(&self, wakes: &mut Vec<usize>, drops: &mut Vec<usize>) {
+        let mut d = self.0.reqs.lock().unwrap();
+        swap(wakes, &mut d.wakes);
+        swap(drops, &mut d.drops);
     }
     fn push_with(&self, f: impl FnOnce(&mut RawRequests)) {
         let mut d = self.0.reqs.lock().unwrap();
@@ -345,7 +347,8 @@ impl<Fut: Future> DynRunnable for RawRunnable<Fut> {
 
 struct Runner {
     rc: RequestChannel,
-    reqs: RawRequests,
+    wakes: Vec<usize>,
+    drops: Vec<usize>,
     rs: SlabMap<Option<Runnable>>,
     _backend: Option<Box<dyn RuntimeBackend>>,
 }
@@ -354,32 +357,33 @@ impl Runner {
     fn new(waker: Arc<dyn RuntimeWaker>, backend: Option<Box<dyn RuntimeBackend>>) -> Self {
         Self {
             rc: RequestChannel::new(waker),
-            reqs: RawRequests::new(),
+            wakes: Vec::new(),
+            drops: Vec::new(),
             rs: SlabMap::new(),
             _backend: backend,
         }
     }
     fn ready_requests(&mut self) -> bool {
-        self.rc.swap(&mut self.reqs);
+        self.rc.swap(&mut self.wakes, &mut self.drops);
         Runtime::with(|rt| {
             for r in rt.rs.drain(..) {
-                self.reqs.wakes.push(
+                self.wakes.push(
                     self.rs
                         .insert_with_key(|id| Some(Runnable::new(r, id, &self.rc))),
                 );
             }
         });
-        !self.reqs.is_empty()
+        !self.wakes.is_empty() || !self.drops.is_empty()
     }
     fn apply_drops(&mut self) {
-        for id in self.reqs.drops.drain(..) {
+        for id in self.drops.drain(..) {
             self.rs.remove(id);
         }
     }
 
     fn step(&mut self) {
         while self.ready_requests() {
-            for id in self.reqs.wakes.drain(..) {
+            for id in self.wakes.drain(..) {
                 run_item(&mut self.rs[id]);
             }
             self.apply_drops();
