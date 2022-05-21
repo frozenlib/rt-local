@@ -1,4 +1,4 @@
-use crate::{MainLoop, RuntimeWaker};
+use crate::runtime::{MainLoop, RuntimeWaker};
 use std::sync::{Arc, Condvar, Mutex};
 
 pub struct UnitMainLoop(Arc<Waker>);

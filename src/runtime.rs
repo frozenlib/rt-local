@@ -18,32 +18,27 @@ pub trait MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
     fn run(&self, f: impl FnMut() -> bool);
 }
+pub trait RuntimeBackend {
+    fn waker(&self) -> Arc<dyn RuntimeWaker>;
+}
+
 pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
-pub fn run<T>(message_loop: &impl MainLoop, mut main: impl Future<Output = T>) -> T {
-    let requests = Requests::new(message_loop.waker());
-    Runtime::enter(&requests);
+
+pub fn run<T>(main_loop: &impl MainLoop, mut main: impl Future<Output = T>) -> T {
+    let mut runner = Runner::new(main_loop.waker());
+    Runtime::enter(&runner.rc);
     let mut main = unsafe { Pin::new_unchecked(&mut main) };
-    let main_wake = TaskWake::new(ID_MAIN, &requests);
-    requests.push_wake(ID_MAIN);
+    let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
+    runner.rc.push_wake(ID_MAIN);
 
-    let mut reqs = RawRequests::new();
-    let mut rs = SlabMap::new();
     let mut result = None;
-
-    message_loop.run(|| loop {
-        requests.swap(&mut reqs);
-        Runtime::with(|rt| {
-            for r in rt.rs.drain(..) {
-                reqs.wakes
-                    .push(rs.insert_with_key(|id| Some(Runnable::new(r, id, &requests))));
-            }
-        });
-        if reqs.is_empty() {
+    main_loop.run(|| loop {
+        if !runner.ready_requests() {
             return true;
         }
-        for id in reqs.wakes.drain(..) {
+        for id in runner.reqs.wakes.drain(..) {
             if id == ID_MAIN {
                 match main
                     .as_mut()
@@ -55,30 +50,53 @@ pub fn run<T>(message_loop: &impl MainLoop, mut main: impl Future<Output = T>) -
                     }
                     Poll::Pending => {}
                 }
-            } else if let Some(r) = &mut rs[id] {
-                if !r.run() {
-                    rs[id].take();
-                }
+            } else {
+                run_item(&mut runner.rs[id]);
             }
         }
-        for id in reqs.drops.drain(..) {
-            rs.remove(id);
-        }
+        runner.apply_drops();
     });
     Runtime::leave();
     result.expect("message loop aborted")
 }
+
+thread_local! {
+    static RUNNER: RefCell<Option<Runner>> = RefCell::new(None);
+}
+
+pub fn enter(backend: impl RuntimeBackend) {
+    let runner = Runner::new(backend.waker());
+    Runtime::enter(&runner.rc);
+    RUNNER.with(|r| *r.borrow_mut() = Some(runner));
+}
+pub fn leave() {
+    RUNNER.with(|r| {
+        if r.borrow_mut().take().is_none() {
+            panic!("runtime backend is not exists")
+        }
+    });
+    Runtime::leave();
+}
+pub fn step() {
+    RUNNER.with(|r| {
+        r.borrow_mut()
+            .as_mut()
+            .expect("runtime backend is not exists")
+            .step()
+    });
+}
+
 #[must_use]
 pub fn spawn_local<Fut: Future + 'static>(fut: Fut) -> Task<Fut::Output> {
     Runtime::with(|rt| {
         let need_wake = rt.rs.is_empty();
-        let task = RawTask::new(&rt.reqs);
+        let task = RawTask::new(&rt.rc);
         rt.rs.push(Box::pin(RawRunnable {
             task: task.clone(),
             fut,
         }));
         if need_wake {
-            rt.reqs.0.waker.wake();
+            rt.rc.0.waker.wake();
         }
         Task {
             task,
@@ -87,14 +105,10 @@ pub fn spawn_local<Fut: Future + 'static>(fut: Fut) -> Task<Fut::Output> {
     })
 }
 
-thread_local! {
-    static RUNTIME: RefCell<Option<Runtime>> = RefCell::new(None);
-}
-
 #[derive(Clone)]
-struct Requests(Arc<RequestsData>);
+struct RequestChannel(Arc<RequestsData>);
 
-impl Requests {
+impl RequestChannel {
     fn new(waker: Arc<dyn RuntimeWaker>) -> Self {
         Self(Arc::new(RequestsData {
             reqs: Mutex::new(RawRequests::new()),
@@ -143,36 +157,33 @@ impl RawRequests {
     }
 }
 
+thread_local! {
+    static RUNTIME: RefCell<Option<Runtime>> = RefCell::new(None);
+}
+
 struct Runtime {
-    reqs: Requests,
+    rc: RequestChannel,
     rs: Vec<Pin<Box<dyn DynRunnable>>>,
 }
 
 impl Runtime {
-    fn new(reqs: Requests) -> Self {
-        Self {
-            reqs,
-            rs: Vec::new(),
-        }
+    fn new(rc: RequestChannel) -> Self {
+        Self { rc, rs: Vec::new() }
     }
-    fn enter(requests: &Requests) {
+    fn enter(rc: &RequestChannel) {
         RUNTIME.with(|rt| {
             let mut rt = rt.borrow_mut();
             if rt.is_some() {
-                panic!("message loop is already running");
+                panic!("runtime is already running");
             }
-            *rt = Some(Runtime::new(requests.clone()));
+            *rt = Some(Runtime::new(rc.clone()));
         })
     }
     fn leave() {
         RUNTIME.with(|rt| rt.borrow_mut().take());
     }
     fn with<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        RUNTIME.with(|rt| {
-            f(rt.borrow_mut()
-                .as_mut()
-                .expect("message loop is not running"))
-        })
+        RUNTIME.with(|rt| f(rt.borrow_mut().as_mut().expect("runtime is not running")))
     }
 }
 
@@ -183,7 +194,7 @@ pub struct Task<T> {
 
 struct RawTask<T> {
     state: Mutex<TaskState<T>>,
-    reqs: Requests,
+    reqs: RequestChannel,
 }
 
 enum TaskState<T> {
@@ -239,13 +250,13 @@ impl<T> Future for Task<T> {
 }
 
 impl<T> RawTask<T> {
-    fn new(requests: &Requests) -> Arc<Self> {
+    fn new(rc: &RequestChannel) -> Arc<Self> {
         Arc::new(RawTask {
             state: Mutex::new(TaskState::Running {
                 id: ID_NULL,
                 waker: None,
             }),
-            reqs: requests.clone(),
+            reqs: rc.clone(),
         })
     }
     fn complete(&self, value: T) {
@@ -296,16 +307,58 @@ impl<Fut: Future> DynRunnable for RawRunnable<Fut> {
     }
 }
 
+struct Runner {
+    rc: RequestChannel,
+    reqs: RawRequests,
+    rs: SlabMap<Option<Runnable>>,
+}
+
+impl Runner {
+    fn new(waker: Arc<dyn RuntimeWaker>) -> Self {
+        Self {
+            rc: RequestChannel::new(waker),
+            reqs: RawRequests::new(),
+            rs: SlabMap::new(),
+        }
+    }
+    fn ready_requests(&mut self) -> bool {
+        self.rc.swap(&mut self.reqs);
+        Runtime::with(|rt| {
+            for r in rt.rs.drain(..) {
+                self.reqs.wakes.push(
+                    self.rs
+                        .insert_with_key(|id| Some(Runnable::new(r, id, &self.rc))),
+                );
+            }
+        });
+        !self.reqs.is_empty()
+    }
+    fn apply_drops(&mut self) {
+        for id in self.reqs.drops.drain(..) {
+            self.rs.remove(id);
+        }
+    }
+
+    fn step(&mut self) {
+        while self.ready_requests() {
+            for id in self.reqs.wakes.drain(..) {
+                run_item(&mut self.rs[id]);
+            }
+            self.apply_drops();
+        }
+    }
+}
+
 struct Runnable {
     wake: Arc<TaskWake>,
     r: Pin<Box<dyn DynRunnable>>,
 }
 
 impl Runnable {
-    fn new(r: Pin<Box<dyn DynRunnable>>, id: usize, requests: &Requests) -> Self {
+    fn new(r: Pin<Box<dyn DynRunnable>>, id: usize, rc: &RequestChannel) -> Self {
         r.as_ref().set_id(id);
         Self {
-            wake: TaskWake::new(id, requests),
+            wake: TaskWake::new(id, rc),
             r,
         }
     }
@@ -313,19 +366,26 @@ impl Runnable {
         self.r.as_mut().run(&self.wake.waker())
     }
 }
+fn run_item(r: &mut Option<Runnable>) {
+    if let Some(runnable) = r {
+        if !runnable.run() {
+            r.take();
+        }
+    }
+}
 
 struct TaskWake {
     id: usize,
     is_wake: AtomicBool,
-    requests: Requests,
+    rc: RequestChannel,
 }
 
 impl TaskWake {
-    fn new(id: usize, requests: &Requests) -> Arc<Self> {
+    fn new(id: usize, rc: &RequestChannel) -> Arc<Self> {
         Arc::new(TaskWake {
             id,
             is_wake: AtomicBool::new(true),
-            requests: requests.clone(),
+            rc: rc.clone(),
         })
     }
     fn waker(self: &Arc<Self>) -> Waker {
@@ -337,12 +397,12 @@ impl TaskWake {
 impl Wake for TaskWake {
     fn wake(self: Arc<Self>) {
         if !self.is_wake.swap(true, Ordering::SeqCst) {
-            self.requests.push_wake(self.id)
+            self.rc.push_wake(self.id)
         }
     }
 }
 impl Drop for TaskWake {
     fn drop(&mut self) {
-        self.requests.push_drop(self.id);
+        self.rc.push_drop(self.id);
     }
 }

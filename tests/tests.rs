@@ -4,7 +4,8 @@ use std::{
 };
 
 use async_std::task::sleep;
-use rt_local::*;
+use rt_local::backends::*;
+use rt_local::runtime::*;
 
 #[test]
 fn test_run() {
