@@ -1,5 +1,8 @@
 use crate::runtime::{on_idle, RuntimeLoop, RuntimeWaker};
-use std::sync::{Arc, Condvar, Mutex};
+use std::{
+    ops::ControlFlow,
+    sync::{Arc, Condvar, Mutex},
+};
 
 pub struct MainLoop(Arc<Waker>);
 
@@ -27,15 +30,15 @@ impl RuntimeLoop for MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }
-    fn run(&self, mut on_step: impl FnMut() -> bool) {
+    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
         let mut is_wake = self.0.is_wake.lock().unwrap();
         loop {
             if *is_wake {
                 *is_wake = false;
                 drop(is_wake);
                 loop {
-                    if !on_step() {
-                        return;
+                    if let ControlFlow::Break(value) = on_step() {
+                        return value;
                     }
                     if !on_idle() {
                         break;

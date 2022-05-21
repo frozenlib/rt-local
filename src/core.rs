@@ -4,6 +4,7 @@ use std::{
     collections::VecDeque,
     future::Future,
     mem::{replace, swap},
+    ops::ControlFlow,
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -20,7 +21,7 @@ pub trait RuntimeBackend: 'static {
 }
 pub trait RuntimeLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
-    fn run(&self, on_step: impl FnMut() -> bool);
+    fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> T;
 }
 
 pub trait RuntimeWaker: 'static + Send + Sync {
@@ -34,8 +35,7 @@ pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
 
     let mut main = Box::pin(f);
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
-    let mut result = None;
-    l.run(|| {
+    let value = l.run(|| {
         while runner.ready_requests() {
             for id in runner.wakes.drain(..) {
                 if id == ID_MAIN {
@@ -43,10 +43,7 @@ pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
                         .as_mut()
                         .poll(&mut Context::from_waker(&main_wake.waker()))
                     {
-                        Poll::Ready(value) => {
-                            result = Some(value);
-                            return false;
-                        }
+                        Poll::Ready(value) => return ControlFlow::Break(value),
                         Poll::Pending => {}
                     }
                 } else {
@@ -55,10 +52,10 @@ pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
             }
             runner.apply_drops();
         }
-        true
+        ControlFlow::Continue(())
     });
     Runtime::leave();
-    result.expect("message loop aborted")
+    value
 }
 
 thread_local! {
