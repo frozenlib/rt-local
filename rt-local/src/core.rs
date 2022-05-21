@@ -21,14 +21,14 @@ pub trait RuntimeBackend: 'static {
 }
 pub trait RuntimeLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
-    fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> T;
+    fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> Option<T>;
 }
 
 pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 
-pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> T {
+pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> Option<T> {
     let mut runner = Runner::new(l.waker(), None);
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);

@@ -1,13 +1,2 @@
-[package]
-name = "rt-local"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-slabmap = "0.1.1"
-futures-core = "0.3.21"
-
-[dev-dependencies]
-async-std = "1.11.0"
+[workspace]
+members = ["rt-local", "rt-local-windows"]

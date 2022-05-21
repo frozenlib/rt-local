@@ -1,0 +1,19 @@
+[package]
+name = "rt-local-windows"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rt-local = { version = "0.1.0", path = "../rt-local" }
+derive-ex = "0.1.0"
+
+
+[dependencies.windows]
+version = "0.37.0"
+features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+]

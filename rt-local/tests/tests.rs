@@ -9,7 +9,7 @@ use std::{
 };
 
 fn run(f: impl Future<Output = ()>) {
-    runtime::run(&MainLoop::new(), f)
+    runtime::run(&MainLoop::new(), f);
 }
 
 #[test]

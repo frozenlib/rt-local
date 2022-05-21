@@ -30,7 +30,7 @@ impl RuntimeLoop for MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }
-    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
+    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> Option<T> {
         let mut is_wake = self.0.is_wake.lock().unwrap();
         loop {
             if *is_wake {
@@ -38,7 +38,7 @@ impl RuntimeLoop for MainLoop {
                 drop(is_wake);
                 loop {
                     if let ControlFlow::Break(value) = on_step() {
-                        return value;
+                        return Some(value);
                     }
                     if !on_idle() {
                         break;
