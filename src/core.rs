@@ -1,6 +1,7 @@
 use slabmap::SlabMap;
 use std::{
     cell::RefCell,
+    collections::VecDeque,
     future::Future,
     mem::{replace, swap},
     pin::Pin,
@@ -14,50 +15,76 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait RuntimeMainLoop {
-    fn waker(&self) -> Arc<dyn RuntimeWaker>;
-    fn run(&self, f: impl FnMut() -> bool);
-}
 pub trait RuntimeBackend {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
+}
+pub trait RuntimeMainLoop {
+    fn waker(&self) -> Arc<dyn RuntimeWaker>;
+    fn run(&self, cb: impl RuntimeCallback);
 }
 
 pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
+pub trait RuntimeCallback {
+    fn on_step(&mut self) -> bool;
+    fn on_idle(&mut self) -> bool;
+}
 
-pub fn run<T>(main_loop: &impl RuntimeMainLoop, mut f: impl Future<Output = T>) -> T {
-    let mut runner = Runner::new(main_loop.waker());
+pub fn run<T>(main_loop: &impl RuntimeMainLoop, f: impl Future<Output = T>) -> T {
+    let runner = Runner::new(main_loop.waker());
     Runtime::enter(&runner.rc);
-    let mut main = unsafe { Pin::new_unchecked(&mut f) };
-    let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
-    let mut result = None;
-    main_loop.run(|| loop {
-        if !runner.ready_requests() {
-            return true;
-        }
-        for id in runner.reqs.wakes.drain(..) {
-            if id == ID_MAIN {
-                match main
-                    .as_mut()
-                    .poll(&mut Context::from_waker(&main_wake.waker()))
-                {
-                    Poll::Ready(value) => {
-                        result = Some(value);
-                        return false;
-                    }
-                    Poll::Pending => {}
-                }
-            } else {
-                run_item(&mut runner.rs[id]);
-            }
-        }
-        runner.apply_drops();
-    });
+    let mut cb = RunCallback {
+        main: Box::pin(f),
+        main_wake: TaskWake::new(ID_MAIN, &runner.rc),
+        runner,
+        result: None,
+    };
+    main_loop.run(&mut cb);
     Runtime::leave();
-    result.expect("message loop aborted")
+    cb.result.expect("message loop aborted")
+}
+struct RunCallback<F: Future> {
+    main: Pin<Box<F>>,
+    main_wake: Arc<TaskWake>,
+    runner: Runner,
+    result: Option<F::Output>,
+}
+impl<F: Future> RuntimeCallback for &mut RunCallback<F> {
+    fn on_step(&mut self) -> bool {
+        while self.runner.ready_requests() {
+            for id in self.runner.reqs.wakes.drain(..) {
+                if id == ID_MAIN {
+                    match self
+                        .main
+                        .as_mut()
+                        .poll(&mut Context::from_waker(&self.main_wake.waker()))
+                    {
+                        Poll::Ready(value) => {
+                            self.result = Some(value);
+                            return false;
+                        }
+                        Poll::Pending => {}
+                    }
+                } else {
+                    run_item(&mut self.runner.rs[id]);
+                }
+            }
+            self.runner.apply_drops();
+        }
+        true
+    }
+
+    fn on_idle(&mut self) -> bool {
+        if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
+            on_idle.wake();
+            true
+        } else {
+            false
+        }
+    }
 }
 
 thread_local! {
@@ -104,6 +131,26 @@ pub fn spawn_local<Fut: Future + 'static>(fut: Fut) -> Task<Fut::Output> {
         }
     })
 }
+pub async fn yield_now() {
+    struct YieldNow {
+        is_ready: bool,
+    }
+    impl Future for YieldNow {
+        type Output = ();
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            if self.is_ready {
+                Poll::Ready(())
+            } else {
+                self.is_ready = true;
+                Runtime::with(|rt| rt.rc.push_on_idle(cx.waker().clone()));
+                Poll::Pending
+            }
+        }
+    }
+
+    YieldNow { is_ready: false }.await;
+}
 
 #[derive(Clone)]
 struct RequestChannel(Arc<RequestsData>);
@@ -118,21 +165,25 @@ impl RequestChannel {
     fn swap(&self, reqs: &mut RawRequests) {
         swap(reqs, &mut *self.0.reqs.lock().unwrap())
     }
-    fn push_wake(&self, id: usize) {
-        let mut l = self.0.reqs.lock().unwrap();
-        let is_wake = l.is_empty();
-        l.wakes.push(id);
-        if is_wake {
+    fn push_with(&self, f: impl FnOnce(&mut RawRequests)) {
+        let mut d = self.0.reqs.lock().unwrap();
+        let call_wake = d.is_empty();
+        f(&mut d);
+        if call_wake {
             self.0.waker.wake();
         }
     }
+    fn push_wake(&self, id: usize) {
+        self.push_with(|d| d.wakes.push(id));
+    }
     fn push_drop(&self, id: usize) {
-        let mut l = self.0.reqs.lock().unwrap();
-        let is_wake = l.is_empty();
-        l.drops.push(id);
-        if is_wake {
-            self.0.waker.wake();
-        }
+        self.push_with(|d| d.drops.push(id));
+    }
+    fn push_on_idle(&self, waker: Waker) {
+        self.push_with(|d| d.on_idle.push_back(waker));
+    }
+    fn pop_on_idle(&self) -> Option<Waker> {
+        self.0.reqs.lock().unwrap().on_idle.pop_front()
     }
 }
 struct RequestsData {
@@ -143,6 +194,7 @@ struct RequestsData {
 struct RawRequests {
     wakes: Vec<usize>,
     drops: Vec<usize>,
+    on_idle: VecDeque<Waker>,
 }
 
 impl RawRequests {
@@ -150,10 +202,11 @@ impl RawRequests {
         Self {
             wakes: Vec::new(),
             drops: Vec::new(),
+            on_idle: VecDeque::new(),
         }
     }
     fn is_empty(&self) -> bool {
-        self.wakes.is_empty() && self.drops.is_empty()
+        self.wakes.is_empty() && self.drops.is_empty() && self.on_idle.is_empty()
     }
 }
 

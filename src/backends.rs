@@ -1,4 +1,4 @@
-use crate::core::{RuntimeMainLoop, RuntimeWaker};
+use crate::core::{RuntimeCallback, RuntimeMainLoop, RuntimeWaker};
 use std::sync::{Arc, Condvar, Mutex};
 
 pub struct MainLoop(Arc<Waker>);
@@ -27,15 +27,19 @@ impl RuntimeMainLoop for MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }
-
-    fn run(&self, mut f: impl FnMut() -> bool) {
+    fn run(&self, mut cb: impl RuntimeCallback) {
         let mut is_wake = self.0.is_wake.lock().unwrap();
         loop {
             if *is_wake {
                 *is_wake = false;
                 drop(is_wake);
-                if !f() {
-                    return;
+                loop {
+                    if !cb.on_step() {
+                        return;
+                    }
+                    if !cb.on_idle() {
+                        break;
+                    }
                 }
                 is_wake = self.0.is_wake.lock().unwrap()
             } else {

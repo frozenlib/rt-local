@@ -74,6 +74,17 @@ fn test_detach() {
     p.assert_list(&["1", "2"]);
 }
 
+#[test]
+fn test_yield() {
+    let p = AssertPass::new();
+    run(async {
+        p.pass("1");
+        yield_now().await;
+        p.pass("2");
+    });
+    p.assert_list(&["1", "2"]);
+}
+
 #[derive(Clone)]
 struct AssertPass(Arc<Mutex<Vec<&'static str>>>);
 
