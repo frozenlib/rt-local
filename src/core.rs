@@ -26,10 +26,10 @@ pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 
-pub fn run<T>(main_loop: &impl RuntimeMainLoop, mut main: impl Future<Output = T>) -> T {
+pub fn run<T>(main_loop: &impl RuntimeMainLoop, mut f: impl Future<Output = T>) -> T {
     let mut runner = Runner::new(main_loop.waker());
     Runtime::enter(&runner.rc);
-    let mut main = unsafe { Pin::new_unchecked(&mut main) };
+    let mut main = unsafe { Pin::new_unchecked(&mut f) };
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
