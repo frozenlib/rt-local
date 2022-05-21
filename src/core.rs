@@ -20,66 +20,45 @@ pub trait RuntimeBackend {
 }
 pub trait RuntimeMainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
-    fn run(&self, cb: impl RuntimeCallback);
+    fn run(&self, on_step: impl FnMut() -> bool);
 }
 
 pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
-pub trait RuntimeCallback {
-    fn on_step(&mut self) -> bool;
-    fn on_idle(&mut self) -> bool;
-}
 
 pub fn run<T>(main_loop: &impl RuntimeMainLoop, f: impl Future<Output = T>) -> T {
-    let runner = Runner::new(main_loop.waker());
+    let mut runner = Runner::new(main_loop.waker());
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
-    let mut cb = RunCallback {
-        main: Box::pin(f),
-        main_wake: TaskWake::new(ID_MAIN, &runner.rc),
-        runner,
-        result: None,
-    };
-    main_loop.run(&mut cb);
-    Runtime::leave();
-    cb.result.expect("message loop aborted")
-}
-struct RunCallback<F: Future> {
-    main: Pin<Box<F>>,
-    main_wake: Arc<TaskWake>,
-    runner: Runner,
-    result: Option<F::Output>,
-}
-impl<F: Future> RuntimeCallback for &mut RunCallback<F> {
-    fn on_step(&mut self) -> bool {
-        while self.runner.ready_requests() {
-            for id in self.runner.reqs.wakes.drain(..) {
+    let mut main = Box::pin(f);
+    let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
+    let mut result = None;
+    main_loop.run(|| {
+        while runner.ready_requests() {
+            for id in runner.reqs.wakes.drain(..) {
                 if id == ID_MAIN {
-                    match self
-                        .main
+                    match main
                         .as_mut()
-                        .poll(&mut Context::from_waker(&self.main_wake.waker()))
+                        .poll(&mut Context::from_waker(&main_wake.waker()))
                     {
                         Poll::Ready(value) => {
-                            self.result = Some(value);
+                            result = Some(value);
                             return false;
                         }
                         Poll::Pending => {}
                     }
                 } else {
-                    run_item(&mut self.runner.rs[id]);
+                    run_item(&mut runner.rs[id]);
                 }
             }
-            self.runner.apply_drops();
+            runner.apply_drops();
         }
         true
-    }
-
-    fn on_idle(&mut self) -> bool {
-        on_idle()
-    }
+    });
+    Runtime::leave();
+    result.expect("message loop aborted")
 }
 
 thread_local! {
