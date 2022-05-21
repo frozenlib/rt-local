@@ -1,14 +1,14 @@
-use crate::runtime::{MainLoop, RuntimeWaker};
+use crate::core::{RuntimeMainLoop, RuntimeWaker};
 use std::sync::{Arc, Condvar, Mutex};
 
-pub struct UnitMainLoop(Arc<Waker>);
+pub struct MainLoop(Arc<Waker>);
 
 struct Waker {
     is_wake: Mutex<bool>,
     cv: Condvar,
 }
 
-impl UnitMainLoop {
+impl MainLoop {
     pub fn new() -> Self {
         Self(Arc::new(Waker {
             is_wake: Mutex::new(true),
@@ -17,13 +17,13 @@ impl UnitMainLoop {
     }
 }
 
-impl Default for UnitMainLoop {
+impl Default for MainLoop {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl MainLoop for UnitMainLoop {
+impl RuntimeMainLoop for MainLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }

@@ -1,4 +1,8 @@
 pub mod backends;
-pub mod runtime;
+mod core;
 
-pub use crate::runtime::{spawn_local, Task};
+pub use crate::core::{spawn_local, Task};
+
+pub mod runtime {
+    pub use crate::core::{enter, leave, run, RuntimeBackend, RuntimeMainLoop, RuntimeWaker};
+}

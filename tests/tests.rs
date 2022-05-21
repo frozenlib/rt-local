@@ -6,11 +6,12 @@ use std::{
 use async_std::task::sleep;
 use rt_local::backends::*;
 use rt_local::runtime::*;
+use rt_local::*;
 
 #[test]
 fn test_run() {
     let mut executed = false;
-    run(&UnitMainLoop::new(), async {
+    run(&MainLoop::new(), async {
         executed = true;
     });
     assert!(executed);
@@ -19,7 +20,7 @@ fn test_run() {
 #[test]
 fn test_sleep() {
     let mut executed = false;
-    run(&UnitMainLoop::new(), async {
+    run(&MainLoop::new(), async {
         sleep(Duration::from_secs(1)).await;
         executed = true;
     });
@@ -29,7 +30,7 @@ fn test_sleep() {
 #[test]
 fn test_spawn_local() {
     let p = AssertPass::new();
-    run(&UnitMainLoop::new(), async {
+    run(&MainLoop::new(), async {
         let p1 = p.clone();
         spawn_local(async move {
             sleep(Duration::from_secs(1)).await;
@@ -44,7 +45,7 @@ fn test_spawn_local() {
 #[test]
 fn test_cancel() {
     let p = AssertPass::new();
-    run(&UnitMainLoop::new(), async {
+    run(&MainLoop::new(), async {
         let p1 = p.clone();
         let _ = spawn_local(async move {
             p1.pass("1");
@@ -58,7 +59,7 @@ fn test_cancel() {
 #[test]
 fn test_detach() {
     let p = AssertPass::new();
-    run(&UnitMainLoop::new(), async {
+    run(&MainLoop::new(), async {
         let p1 = p.clone();
         spawn_local(async move {
             p1.pass("1");
