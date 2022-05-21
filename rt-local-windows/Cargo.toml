@@ -16,3 +16,7 @@ features = [
     "Win32_System_Threading",
     "Win32_UI_WindowsAndMessaging",
 ]
+
+
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]
