@@ -16,7 +16,7 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait RuntimeBackend: 'static {
+pub trait RuntimeInjector: 'static {
     fn waker(&self) -> Arc<dyn RuntimeWaker>;
 }
 pub trait RuntimeLoop {
@@ -62,17 +62,13 @@ thread_local! {
     static RUNNER: RefCell<Option<Runner>> = RefCell::new(None);
 }
 
-pub fn enter(backend: impl RuntimeBackend) {
-    let runner = Runner::new(backend.waker(), Some(Box::new(backend)));
+pub fn enter(injector: impl RuntimeInjector) {
+    let runner = Runner::new(injector.waker(), Some(Box::new(injector)));
     Runtime::enter(&runner.rc);
     RUNNER.with(|r| *r.borrow_mut() = Some(runner));
 }
 pub fn leave() {
-    let runner = RUNNER.with(|r| {
-        r.borrow_mut()
-            .take()
-            .expect("runtime backend is not exists")
-    });
+    let runner = RUNNER.with(|r| r.borrow_mut().take().expect("runtime is not exists"));
     Runtime::leave();
     drop(runner);
 }
@@ -80,7 +76,7 @@ pub fn on_step() {
     RUNNER.with(|r| {
         r.borrow_mut()
             .as_mut()
-            .expect("runtime backend is not exists")
+            .expect("runtime is not exists")
             .step()
     });
 }
@@ -347,17 +343,17 @@ struct Runner {
     wakes: Vec<usize>,
     drops: Vec<usize>,
     rs: SlabMap<Option<Runnable>>,
-    _backend: Option<Box<dyn RuntimeBackend>>,
+    _injector: Option<Box<dyn RuntimeInjector>>,
 }
 
 impl Runner {
-    fn new(waker: Arc<dyn RuntimeWaker>, backend: Option<Box<dyn RuntimeBackend>>) -> Self {
+    fn new(waker: Arc<dyn RuntimeWaker>, injector: Option<Box<dyn RuntimeInjector>>) -> Self {
         Self {
             rc: RequestChannel::new(waker),
             wakes: Vec::new(),
             drops: Vec::new(),
             rs: SlabMap::new(),
-            _backend: backend,
+            _injector: injector,
         }
     }
     fn ready_requests(&mut self) -> bool {
