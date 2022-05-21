@@ -1,3 +1,5 @@
+#![cfg(target_os = "windows")]
+
 use derive_ex::derive_ex;
 use rt_local::runtime::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{marker::PhantomData, ops::ControlFlow, sync::Arc};
