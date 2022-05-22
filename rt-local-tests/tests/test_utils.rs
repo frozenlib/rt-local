@@ -1,7 +1,10 @@
+use derive_ex::derive_ex;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
+#[derive_ex(Default)]
+#[default(Self::new())]
 pub struct AssertPass {
     p: Arc<Mutex<Vec<&'static str>>>,
     print: bool,

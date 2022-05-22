@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 rt-local = { path = "../rt-local" }
 rt-local-windows = { path = "../rt-local-windows" }
+derive-ex = "0.1.0"
 
 [dev-dependencies]
 async-std = "1.11.0"
