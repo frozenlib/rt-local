@@ -1,2 +1,2 @@
 [workspace]
-members = ["rt-local", "rt-local-windows"]
+members = ["rt-local", "rt-local-windows", "rt-local-tests"]
