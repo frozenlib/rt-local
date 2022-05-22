@@ -1,17 +1,22 @@
-use crate::runtime::{on_idle, RuntimeLoop, RuntimeWaker};
+use crate::core::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{
+    future::Future,
     ops::ControlFlow,
     sync::{Arc, Condvar, Mutex},
 };
 
-pub struct MainLoop(Arc<Waker>);
+pub fn run<Fut: Future>(fut: Fut) -> Fut::Output {
+    crate::core::run(&NoFrameworkRuntimeLoop::new(), fut).unwrap()
+}
+
+struct NoFrameworkRuntimeLoop(Arc<Waker>);
 
 struct Waker {
     is_wake: Mutex<bool>,
     cv: Condvar,
 }
 
-impl MainLoop {
+impl NoFrameworkRuntimeLoop {
     pub fn new() -> Self {
         Self(Arc::new(Waker {
             is_wake: Mutex::new(true),
@@ -20,13 +25,13 @@ impl MainLoop {
     }
 }
 
-impl Default for MainLoop {
+impl Default for NoFrameworkRuntimeLoop {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RuntimeLoop for MainLoop {
+impl RuntimeLoop for NoFrameworkRuntimeLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }

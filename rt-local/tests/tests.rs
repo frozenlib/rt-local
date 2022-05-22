@@ -1,16 +1,11 @@
 use async_std::task::sleep;
-use rt_local::backends::*;
+use rt_local::runtime::run;
 use rt_local::*;
 use std::collections::HashSet;
-use std::future::Future;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-
-fn run(f: impl Future<Output = ()>) {
-    runtime::run(&MainLoop::new(), f);
-}
 
 #[test]
 fn test_run() {

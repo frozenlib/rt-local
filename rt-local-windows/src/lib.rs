@@ -1,7 +1,7 @@
 #![cfg(target_os = "windows")]
 
 use derive_ex::derive_ex;
-use rt_local::runtime::{on_idle, RuntimeLoop, RuntimeWaker};
+use rt_local::core::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{marker::PhantomData, ops::ControlFlow, sync::Arc};
 use windows::Win32::{
     Foundation::{HWND, LPARAM, WPARAM},
