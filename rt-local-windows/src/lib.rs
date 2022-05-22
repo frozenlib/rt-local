@@ -1,8 +1,7 @@
 #![cfg(target_os = "windows")]
 
-use derive_ex::derive_ex;
 use rt_local::core::{on_idle, RuntimeLoop, RuntimeWaker};
-use std::{marker::PhantomData, ops::ControlFlow, sync::Arc};
+use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc};
 use windows::Win32::{
     Foundation::{HWND, LPARAM, WPARAM},
     System::Threading::GetCurrentThreadId,
@@ -12,15 +11,17 @@ use windows::Win32::{
     },
 };
 
-#[derive_ex(Default)]
-#[default(Self::new())]
-pub struct WindowsMessageLoop {
+pub fn run<F: Future>(future: F) -> F::Output {
+    rt_local::core::run(&WindowsMessageLoop::new(), future)
+}
+
+struct WindowsMessageLoop {
     waker: Arc<Waker>,
     _not_send: PhantomData<*mut ()>,
 }
 
 impl WindowsMessageLoop {
-    pub fn new() -> Self {
+    fn new() -> Self {
         unsafe {
             let thread_id = GetCurrentThreadId();
             Self {
