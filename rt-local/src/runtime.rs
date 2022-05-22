@@ -6,7 +6,7 @@ use std::{
 };
 
 pub fn run<F: Future>(future: F) -> F::Output {
-    crate::core::run(&NoFrameworkRuntimeLoop::new(), future).unwrap()
+    crate::core::run(&NoFrameworkRuntimeLoop::new(), future)
 }
 
 struct NoFrameworkRuntimeLoop(Arc<Waker>);
@@ -35,7 +35,7 @@ impl RuntimeLoop for NoFrameworkRuntimeLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.0.clone()
     }
-    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> Option<T> {
+    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
         let mut is_wake = self.0.is_wake.lock().unwrap();
         loop {
             if *is_wake {
@@ -43,7 +43,7 @@ impl RuntimeLoop for NoFrameworkRuntimeLoop {
                 drop(is_wake);
                 loop {
                     if let ControlFlow::Break(value) = on_step() {
-                        return Some(value);
+                        return value;
                     }
                     if !on_idle() {
                         break;

@@ -34,10 +34,10 @@ impl RuntimeLoop for WindowsMessageLoop {
     fn waker(&self) -> Arc<dyn RuntimeWaker> {
         self.waker.clone()
     }
-    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> Option<T> {
+    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
         loop {
             if let ControlFlow::Break(value) = on_step() {
-                return Some(value);
+                return value;
             }
             let mut msg = MSG::default();
             unsafe {
@@ -49,7 +49,7 @@ impl RuntimeLoop for WindowsMessageLoop {
                     }
                 }
                 if msg.message == WM_QUIT {
-                    return None;
+                    panic!("message loop terminated");
                 }
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
