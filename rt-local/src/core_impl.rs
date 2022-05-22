@@ -28,12 +28,12 @@ pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 
-pub fn run<T>(l: &impl RuntimeLoop, f: impl Future<Output = T>) -> Option<T> {
+pub fn run<F: Future>(l: &impl RuntimeLoop, future: F) -> Option<F::Output> {
     let mut runner = Runner::new(l.waker(), None);
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
-    let mut main = Box::pin(f);
+    let mut main = Box::pin(future);
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     let value = l.run(|| {
         while runner.ready_requests() {
@@ -90,13 +90,13 @@ pub fn on_idle() -> bool {
 }
 
 #[must_use]
-pub fn spawn_local<Fut: Future + 'static>(fut: Fut) -> Task<Fut::Output> {
+pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
     Runtime::with(|rt| {
         let need_wake = rt.rs.is_empty();
         let task = RawTask::new(&rt.rc);
         rt.rs.push(Box::pin(RawRunnable {
             task: task.clone(),
-            fut,
+            future,
         }));
         if need_wake {
             rt.rc.0.waker.wake();
@@ -310,9 +310,9 @@ trait DynRunnable {
     fn run(self: Pin<&mut Self>, waker: &Waker) -> bool;
 }
 
-struct RawRunnable<Fut: Future> {
-    task: Arc<RawTask<Fut::Output>>,
-    fut: Fut,
+struct RawRunnable<F: Future> {
+    task: Arc<RawTask<F::Output>>,
+    future: F,
 }
 impl<Fut: Future> DynRunnable for RawRunnable<Fut> {
     fn set_id(self: Pin<&Self>, id: usize) {
@@ -326,8 +326,8 @@ impl<Fut: Future> DynRunnable for RawRunnable<Fut> {
         } else {
             unsafe {
                 let this = self.get_unchecked_mut();
-                let fut = Pin::new_unchecked(&mut this.fut);
-                if let Poll::Ready(value) = fut.poll(&mut Context::from_waker(waker)) {
+                let f = Pin::new_unchecked(&mut this.future);
+                if let Poll::Ready(value) = f.poll(&mut Context::from_waker(waker)) {
                     this.task.complete(value);
                     false
                 } else {

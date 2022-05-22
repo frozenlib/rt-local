@@ -5,8 +5,8 @@ use std::{
     sync::{Arc, Condvar, Mutex},
 };
 
-pub fn run<Fut: Future>(fut: Fut) -> Fut::Output {
-    crate::core::run(&NoFrameworkRuntimeLoop::new(), fut).unwrap()
+pub fn run<F: Future>(future: F) -> F::Output {
+    crate::core::run(&NoFrameworkRuntimeLoop::new(), future).unwrap()
 }
 
 struct NoFrameworkRuntimeLoop(Arc<Waker>);
