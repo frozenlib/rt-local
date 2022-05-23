@@ -90,6 +90,7 @@ pub fn on_idle() -> bool {
 }
 
 #[must_use]
+#[track_caller]
 pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
     Runtime::with(|rt| {
         let need_wake = rt.rs.is_empty();
@@ -213,8 +214,11 @@ impl Runtime {
     fn leave() {
         RUNTIME.with(|rt| rt.borrow_mut().take());
     }
+    #[track_caller]
     fn with<T>(f: impl FnOnce(&mut Self) -> T) -> T {
-        RUNTIME.with(|rt| f(rt.borrow_mut().as_mut().expect("runtime is not running")))
+        RUNTIME
+            .with(|rt| rt.borrow_mut().as_mut().map(f))
+            .expect("runtime is not running")
     }
 }
 
