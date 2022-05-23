@@ -1,12 +1,8 @@
 # rt-local
 
-[![Crates.io][rt-local-cb]][rt-local-c]
-[![Docs.rs][rt-local-db]][rt-local-d]
 [![Actions Status](https://github.com/frozenlib/rt-local/workflows/CI/badge.svg)](https://github.com/frozenlib/rt-local/actions)
 
 Thread local async runtime.
-
-## Crates
 
 |                  | Crate                                                   | Documentaiton                                         |
 | ---------------- | ------------------------------------------------------- | ----------------------------------------------------- |
