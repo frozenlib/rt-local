@@ -8,7 +8,7 @@ readme = "../README.md"
 repository = "https://github.com/frozenlib/rt-local"
 documentation = "https://docs.rs/rt-local/"
 categories = ["asynchronous"]
-keywords = ["async", "spawn_local", "thread_local", "executor", "runtime"]
+keywords = ["async", "spawn_local", "thread_local", "ui_thread"]
 description = "Thread local async runtime."
 
 

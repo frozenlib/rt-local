@@ -8,7 +8,7 @@ readme = "../README.md"
 repository = "https://github.com/frozenlib/rt-local"
 documentation = "https://docs.rs/rt-local-windows/"
 categories = ["asynchronous"]
-keywords = ["async", "spawn_local", "message_loop", "get_message", "windows"]
+keywords = ["async", "spawn_local", "message_loop", "ui_thread", "windows"]
 description = "Thread local async runtime implemented by windows message loop."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
