@@ -279,7 +279,7 @@ impl<T> Future for Task<T> {
                     unreachable!()
                 }
             }
-            TaskState::Finished => panic!("`poll` called twice."),
+            TaskState::Finished => panic!("`poll` called twice"),
         }
     }
 }
