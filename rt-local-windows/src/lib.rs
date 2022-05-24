@@ -1,6 +1,6 @@
 #![cfg(target_os = "windows")]
 
-use rt_local::core::{on_idle, RuntimeLoop, RuntimeWaker};
+use rt_local_core::core::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc};
 use windows::Win32::{
     Foundation::{HWND, LPARAM, WPARAM},
@@ -12,7 +12,7 @@ use windows::Win32::{
 };
 
 pub fn run<F: Future>(future: F) -> F::Output {
-    rt_local::core::run(&WindowsMessageLoop::new(), future)
+    rt_local_core::core::run(&WindowsMessageLoop::new(), future)
 }
 
 struct WindowsMessageLoop {

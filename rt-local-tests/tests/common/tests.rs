@@ -1,7 +1,7 @@
 use crate::run;
 use crate::test_utils::*;
 use async_std::task::sleep;
-use rt_local::*;
+use rt_local_core::*;
 use std::time::Duration;
 
 #[test]

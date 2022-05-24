@@ -2,12 +2,12 @@
 name = "rt-local-tests"
 version = "0.1.0"
 edition = "2021"
-publish = false
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rt-local = { path = "../rt-local" }
+rt-local-core = { path = "../rt-local-core" }
 rt-local-windows = { path = "../rt-local-windows" }
 derive-ex = "0.1.0"
 
