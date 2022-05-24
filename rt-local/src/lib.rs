@@ -6,4 +6,4 @@ pub mod runtime {
     pub use rt_local_windows as windows;
 }
 
-pub use rt_local_macros::{rt_local_main, rt_local_test};
+pub use rt_local_macros::{main, test};

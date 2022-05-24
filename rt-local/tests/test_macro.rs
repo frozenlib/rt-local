@@ -1,11 +1,12 @@
-use rt_local::{rt_local_test, yield_now};
+use rt_local::test;
+use rt_local::yield_now;
 
-#[rt_local_test]
+#[test]
 async fn test_macro() {
     yield_now().await;
 }
 
-#[rt_local_test]
+#[test]
 #[should_panic]
 async fn test_macro_panic() {
     yield_now().await;

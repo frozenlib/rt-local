@@ -6,7 +6,7 @@ use syn::{parse2, spanned::Spanned, ItemFn, Result};
 mod syn_utils;
 
 #[proc_macro_attribute]
-pub fn rt_local_test(
+pub fn test(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -22,7 +22,7 @@ pub fn rt_local_test(
 }
 
 #[proc_macro_attribute]
-pub fn rt_local_main(
+pub fn main(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -38,7 +38,7 @@ pub fn rt_local_main(
 }
 
 fn build(_attr: TokenStream, item: TokenStream, is_test: bool) -> Result<TokenStream> {
-    let msg = "`#[rt_local_test]` can only be apply to async functions";
+    let msg = "the `async` keyword is missing from the function declaration";
     if let Ok(mut item_fn) = parse2::<ItemFn>(item) {
         if item_fn.sig.asyncness.is_none() {
             bail!(item_fn.sig.span(), "{}", msg);
@@ -49,7 +49,11 @@ fn build(_attr: TokenStream, item: TokenStream, is_test: bool) -> Result<TokenSt
         let vis = &item_fn.vis;
         let sig = &item_fn.sig;
         let stmts = &item_fn.block.stmts;
-        let test = if is_test { quote!(#[test]) } else { quote!() };
+        let test = if is_test {
+            quote!(#[::core::prelude::v1::test])
+        } else {
+            quote!()
+        };
         Ok(quote! {
             #test
             #(#attrs)*
