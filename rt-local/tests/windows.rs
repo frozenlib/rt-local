@@ -1,4 +1,4 @@
-#![cfg(target_os = "windows")]
+#![cfg(all(target_os = "windows", feature = "windows"))]
 
 use rt_local_windows::run;
 
