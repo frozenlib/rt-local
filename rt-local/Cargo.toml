@@ -19,6 +19,7 @@ windows = ["dep:rt-local-windows"]
 [dependencies]
 rt-local-core = { path = "../rt-local-core" }
 rt-local-windows = { path = "../rt-local-windows", optional = true }
+rt-local-macros = { path = "../rt-local-macros" }
 derive-ex = "0.1.0"
 
 [dev-dependencies]

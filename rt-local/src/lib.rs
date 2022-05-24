@@ -5,3 +5,5 @@ pub mod runtime {
     #[cfg(feature = "windows")]
     pub use rt_local_windows as windows;
 }
+
+pub use rt_local_macros::rt_local_test;
