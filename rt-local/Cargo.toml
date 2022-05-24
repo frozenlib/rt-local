@@ -2,6 +2,14 @@
 name = "rt-local"
 version = "0.1.0"
 edition = "2021"
+authors = ["frozenlib"]
+license = "MIT OR Apache-2.0"
+readme = "../README.md"
+repository = "https://github.com/frozenlib/rt-local"
+documentation = "https://docs.rs/rt-local/"
+categories = ["asynchronous"]
+keywords = ["async"]
+description = "Thread local async runtime."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

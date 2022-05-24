@@ -6,9 +6,9 @@ authors = ["frozenlib"]
 license = "MIT OR Apache-2.0"
 readme = "../README.md"
 repository = "https://github.com/frozenlib/rt-local"
-documentation = "https://docs.rs/rt-local/"
+documentation = "https://docs.rs/rt-local-core/"
 categories = ["asynchronous"]
-keywords = ["async", "spawn_local", "thread_local", "ui_thread"]
+keywords = ["async"]
 description = "Thread local async runtime."
 
 
