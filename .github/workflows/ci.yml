@@ -16,7 +16,7 @@ jobs:
       - name: Build features-none
         run: cargo build ---verbose
       - name: Build features-windows
-        run: cargo build --features windows ---verbose
+        run: cargo build --features windows --verbose
       - name: Build features-all
         run: cargo build --all-features --verbose
       - name: Build tests
