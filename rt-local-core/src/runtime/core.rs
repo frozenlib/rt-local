@@ -1,4 +1,4 @@
-use crate::core::{on_idle, RuntimeLoop, RuntimeWaker};
+use crate::base::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{
     future::Future,
     ops::ControlFlow,
@@ -6,7 +6,7 @@ use std::{
 };
 
 pub fn run<F: Future>(future: F) -> F::Output {
-    crate::core::run(&NoFrameworkRuntimeLoop::new(), future)
+    crate::base::run(&NoFrameworkRuntimeLoop::new(), future)
 }
 
 struct NoFrameworkRuntimeLoop(Arc<Waker>);
