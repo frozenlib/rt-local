@@ -11,7 +11,7 @@ pub fn rt_local_test(
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let mut item: TokenStream = item.into();
-    match build(attr.into(), item.clone()) {
+    match build(attr.into(), item.clone(), true) {
         Ok(s) => s,
         Err(e) => {
             item.extend(e.to_compile_error());
@@ -21,7 +21,23 @@ pub fn rt_local_test(
     .into()
 }
 
-fn build(_attr: TokenStream, item: TokenStream) -> Result<TokenStream> {
+#[proc_macro_attribute]
+pub fn rt_local_main(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let mut item: TokenStream = item.into();
+    match build(attr.into(), item.clone(), false) {
+        Ok(s) => s,
+        Err(e) => {
+            item.extend(e.to_compile_error());
+            item
+        }
+    }
+    .into()
+}
+
+fn build(_attr: TokenStream, item: TokenStream, is_test: bool) -> Result<TokenStream> {
     let msg = "`#[rt_local_test]` can only be apply to async functions";
     if let Ok(mut item_fn) = parse2::<ItemFn>(item) {
         if item_fn.sig.asyncness.is_none() {
@@ -33,8 +49,9 @@ fn build(_attr: TokenStream, item: TokenStream) -> Result<TokenStream> {
         let vis = &item_fn.vis;
         let sig = &item_fn.sig;
         let stmts = &item_fn.block.stmts;
+        let test = if is_test { quote!(#[test]) } else { quote!() };
         Ok(quote! {
-            #[test]
+            #test
             #(#attrs)*
             #vis #sig {
                 ::rt_local::runtime::core::run(async {
