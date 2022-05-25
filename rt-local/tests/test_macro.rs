@@ -1,5 +1,4 @@
-use rt_local::test;
-use rt_local::yield_now;
+use rt_local::{runtime::core::test, yield_now};
 
 #[test]
 async fn test_macro() {

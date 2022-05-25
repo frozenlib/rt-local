@@ -6,7 +6,7 @@ use syn::{parse2, spanned::Spanned, ItemFn, Result};
 mod syn_utils;
 
 #[proc_macro_attribute]
-pub fn test(
+pub fn core_test(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -22,7 +22,7 @@ pub fn test(
 }
 
 #[proc_macro_attribute]
-pub fn main(
+pub fn core_main(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
