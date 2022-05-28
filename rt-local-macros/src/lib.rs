@@ -38,12 +38,13 @@ pub fn core_main(
 }
 
 fn build(_attr: TokenStream, item: TokenStream, is_test: bool) -> Result<TokenStream> {
-    let msg = "the `async` keyword is missing from the function declaration";
     if let Ok(mut item_fn) = parse2::<ItemFn>(item) {
         if item_fn.sig.asyncness.is_none() {
-            bail!(item_fn.sig.span(), "{}", msg);
+            bail!(
+                item_fn.sig.span(),
+                "the `async` keyword is missing from the function declaration"
+            );
         }
-
         item_fn.sig.asyncness = None;
         let attrs = &item_fn.attrs;
         let vis = &item_fn.vis;
@@ -64,6 +65,11 @@ fn build(_attr: TokenStream, item: TokenStream, is_test: bool) -> Result<TokenSt
             }
         })
     } else {
-        bail!(Span::call_site(), "{}", msg);
+        let name = if is_test { "test" } else { "main" };
+        bail!(
+            Span::call_site(),
+            "`#[{}]` can apply to only function",
+            name
+        );
     }
 }
