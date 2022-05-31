@@ -1,5 +1,3 @@
-#![cfg(target_os = "windows")]
-
 use rt_local_core::base::{on_idle, RuntimeLoop, RuntimeWaker};
 use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc};
 use windows::Win32::{

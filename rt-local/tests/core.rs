@@ -1,4 +1,4 @@
-use rt_local_core::runtime::core::run;
+use rt_local::runtime::core::run;
 
 mod test_utils;
 mod common {

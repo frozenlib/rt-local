@@ -1,5 +1,5 @@
-#![cfg(all(target_os = "windows", feature = "windows"))]
-use rt_local_windows::run;
+#![cfg(all(windows, feature = "windows"))]
+use rt_local::runtime::windows::run;
 
 mod test_utils;
 mod common {
