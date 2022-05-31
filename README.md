@@ -33,7 +33,7 @@ async fn main() {
 | `windows`     | [`windows`][module_windows] | windows message loop |
 
 [module_core]: https://docs.rs/rt-local/latest/rt_local/runtime/core/
-[module_windows]: https://docs.rs/rt-local/latest/rt_local/runtime/core/
+[module_windows]: https://docs.rs/rt-local/latest/rt_local/runtime/windows/
 
 ## License
 
