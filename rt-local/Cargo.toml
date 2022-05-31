@@ -17,8 +17,8 @@ description = "Thread local asynchronous runtime working with platform-specific 
 windows = ["dep:windows"]
 
 [dependencies]
-rt-local-core = { path = "../rt-local-core" }
-rt-local-macros = { path = "../rt-local-macros" }
+rt-local-core = { version = "0.1.0", path = "../rt-local-core" }
+rt-local-macros = { version = "=0.1.0", path = "../rt-local-macros" }
 derive-ex = "0.1.0"
 
 [target.'cfg(windows)'.dependencies.windows]
