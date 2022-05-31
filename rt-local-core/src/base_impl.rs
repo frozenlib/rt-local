@@ -89,7 +89,7 @@ pub fn on_idle() -> bool {
     }
 }
 
-/// Spawns a !Send future.
+/// Spawn a future on the current thread.
 ///
 /// # Panics
 ///
@@ -114,12 +114,12 @@ pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
     })
 }
 
-/// Wait until idle.
-pub async fn yield_now() {
-    struct YieldNow {
+/// Wait until there are no more events to be processed by the backend and tasks spawned by [`spawn_local`].
+pub async fn wait_for_idle() {
+    struct WaitForIdle {
         is_ready: bool,
     }
-    impl Future for YieldNow {
+    impl Future for WaitForIdle {
         type Output = ();
 
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -133,7 +133,7 @@ pub async fn yield_now() {
         }
     }
 
-    YieldNow { is_ready: false }.await;
+    WaitForIdle { is_ready: false }.await;
 }
 
 #[derive(Clone)]

@@ -1,5 +1,5 @@
 mod base_impl;
-pub use crate::base_impl::{spawn_local, yield_now, Task};
+pub use crate::base_impl::{spawn_local, wait_for_idle, Task};
 
 /// Components to implement runtime.
 pub mod base {

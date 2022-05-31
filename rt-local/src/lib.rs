@@ -1,4 +1,4 @@
-pub use rt_local_core::{base, spawn_local, yield_now, Task};
+pub use rt_local_core::{base, spawn_local, wait_for_idle, Task};
 
 /// Runtime implementations.
 pub mod runtime;

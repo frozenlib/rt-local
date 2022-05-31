@@ -72,7 +72,7 @@ fn test_yield_now() {
     let p = AssertPass::new();
     run(async {
         p.pass("1");
-        yield_now().await;
+        wait_for_idle().await;
         p.pass("2");
     });
     p.assert(&["1", "2"]);
@@ -86,10 +86,10 @@ fn test_yield_now_many() {
         let p2 = p1.clone();
         let t = spawn_local(async move {
             p2.pass("2-a");
-            yield_now().await;
+            wait_for_idle().await;
             p2.pass("2-b");
         });
-        yield_now().await;
+        wait_for_idle().await;
         p1.pass("1-b");
         t.await;
     });
