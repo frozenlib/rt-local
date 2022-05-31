@@ -89,6 +89,11 @@ pub fn on_idle() -> bool {
     }
 }
 
+/// Spawns a !Send future.
+///
+/// # Panics
+///
+/// Panics if the runtime is not running.
 #[must_use]
 #[track_caller]
 pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
@@ -108,6 +113,8 @@ pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
         }
     })
 }
+
+/// Wait until idle.
 pub async fn yield_now() {
     struct YieldNow {
         is_ready: bool,
@@ -222,6 +229,11 @@ impl Runtime {
     }
 }
 
+/// A spawned task.
+///
+/// When a [`Task`] is dropped, the asynchronous operation is canceled.
+///
+/// To drop a task without canceling, it is necessary to call [`Task::detach()`].
 pub struct Task<T> {
     task: Arc<RawTask<T>>,
     is_detach: bool,
@@ -240,6 +252,7 @@ enum TaskState<T> {
 }
 
 impl<T> Task<T> {
+    /// Drop a task without canceling.
     pub fn detach(mut self) {
         self.is_detach = true;
     }
