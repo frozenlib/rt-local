@@ -1,7 +1,7 @@
 # rt-local
 
 [![Crates.io](https://img.shields.io/crates/v/rt-local.svg)](https://crates.io/crates/rt-local)
-[![Docs.rs](https://docs.rs/rt-local/)](https://docs.rs/rt-local/badge.svg)
+[![Docs.rs](https://docs.rs/rt-local/badge.svg)](https://docs.rs/rt-local/)
 [![Actions Status](https://github.com/frozenlib/rt-local/workflows/CI/badge.svg)](https://github.com/frozenlib/rt-local/actions)
 
 Thread local asynchronous runtime working with platform-specific event loops.
