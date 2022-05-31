@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, Condvar, Mutex},
 };
 
+/// Executes the specified future and blocks until it completes.
 pub fn run<F: Future>(future: F) -> F::Output {
     crate::base::run(&NoFrameworkRuntimeLoop::new(), future)
 }

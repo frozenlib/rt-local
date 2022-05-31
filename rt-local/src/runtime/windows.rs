@@ -9,6 +9,7 @@ use windows::Win32::{
     },
 };
 
+/// Executes the specified future and blocks until it completes.
 pub fn run<F: Future>(future: F) -> F::Output {
     rt_local_core::base::run(&WindowsMessageLoop::new(), future)
 }

@@ -114,7 +114,9 @@ pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
     })
 }
 
-/// Wait until there are no more events to be processed by the backend and tasks spawned by [`spawn_local`].
+/// Wait until there are no more operations to be performed now on the current thread.
+///
+/// The "operations to be performed now" include not only tasks spawned by [`spawn_local`], but also events handled by the runtime backend.
 pub async fn wait_for_idle() {
     struct WaitForIdle {
         is_ready: bool,
