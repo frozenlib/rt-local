@@ -68,7 +68,7 @@ fn test_detach() {
 }
 
 #[test]
-fn test_yield_now() {
+fn test_wait_for_idle() {
     let p = AssertPass::new();
     run(async {
         p.pass("1");
@@ -79,7 +79,7 @@ fn test_yield_now() {
 }
 
 #[test]
-fn test_yield_now_many() {
+fn test_wait_for_idle_many() {
     let p1 = AssertPass::new_with(true);
     run(async {
         p1.pass("1-a");
