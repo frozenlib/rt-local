@@ -9,9 +9,19 @@ Thread local asynchronous runtime working with platform-specific event loops.
 ## Example
 
 ```rust
-#[rt_local::runtime::core::main]
+use rt_local::spawn_local;
+use rt_local::runtime::core::main;
+
+#[main]
 async fn main() {
-  // ...
+  let task_a = spawn_local(async {
+    // ...
+  });
+  let task_b = spawn_local(async {
+    // ...
+  });
+  task_a.await;
+  task_b.await;
 }
 ```
 
