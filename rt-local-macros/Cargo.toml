@@ -9,7 +9,7 @@ repository = "https://github.com/frozenlib/rt-local"
 documentation = "https://docs.rs/rt-local-macros/"
 categories = ["asynchronous"]
 keywords = ["async", "gui"]
-description = "Thread local async runtime."
+description = "Thread local asynchronous runtime working with platform-specific event loops."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

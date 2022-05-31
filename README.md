@@ -4,7 +4,7 @@
 [![Docs.rs](https://docs.rs/rt-local/)](https://docs.rs/rt-local/badge.svg)
 [![Actions Status](https://github.com/frozenlib/rt-local/workflows/CI/badge.svg)](https://github.com/frozenlib/rt-local/actions)
 
-Thread local async runtime.
+Thread local asynchronous runtime working with platform-specific event loops.
 
 ## Example
 
@@ -15,13 +15,12 @@ async fn main() {
 }
 ```
 
-```rust
-fn main() {
-  rt_local::runtime::core::run(async {
-    // ...
-  });
-}
-```
+## Features
+
+| crate feature | module    | backend              |
+| ------------- | --------- | -------------------- |
+|               | `core`    | platform independent |
+| `windows`     | `windows` | windows message loop |
 
 ## License
 
