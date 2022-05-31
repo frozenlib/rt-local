@@ -13,6 +13,9 @@ pub fn run<F: Future>(future: F) -> F::Output {
     rt_local_core::base::run(&WindowsMessageLoop::new(), future)
 }
 
+pub use rt_local_macros::windows_main as main;
+pub use rt_local_macros::windows_test as test;
+
 struct WindowsMessageLoop {
     waker: Arc<Waker>,
     _not_send: PhantomData<*mut ()>,
