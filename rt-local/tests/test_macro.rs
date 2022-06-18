@@ -6,6 +6,9 @@ async fn test_macro() {
 }
 
 #[test]
+fn test_macro_no_async() {}
+
+#[test]
 #[should_panic]
 async fn test_macro_panic() {
     wait_for_idle().await;

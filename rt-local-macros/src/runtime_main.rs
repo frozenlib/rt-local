@@ -9,7 +9,7 @@ pub fn build(
     is_test: bool,
 ) -> Result<TokenStream> {
     if let Ok(mut item_fn) = parse2::<ItemFn>(item) {
-        if item_fn.sig.asyncness.is_none() {
+        if !is_test && item_fn.sig.asyncness.is_none() {
             bail!(
                 item_fn.sig.span(),
                 "the `async` keyword is missing from the function declaration"
