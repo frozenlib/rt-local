@@ -1,7 +1,5 @@
-use std::{cell::RefCell, time::Duration};
-
-use async_std::task::sleep;
 use rt_local::{runtime::core::run, spawn_local, wait_for_idle, Task};
+use std::cell::RefCell;
 
 mod test_utils;
 mod common {

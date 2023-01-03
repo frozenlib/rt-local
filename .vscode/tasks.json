@@ -108,6 +108,8 @@
       "args": [
         "clippy",
         "--all-features",
+        "--tests",
+        "--lib",
         "--",
         "-W",
         "clippy::all"
