@@ -43,9 +43,9 @@ fn test_cancel() {
     let p = AssertPass::new();
     run(async {
         let p1 = p.clone();
-        let _ = spawn_local(async move {
+        drop(spawn_local(async move {
             p1.pass("1");
-        });
+        }));
         sleep(Duration::from_secs(1)).await;
         p.pass("2");
     });

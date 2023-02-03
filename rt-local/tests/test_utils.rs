@@ -24,7 +24,7 @@ impl AssertPass {
     pub fn pass(&self, s: &'static str) {
         self.p.lock().unwrap().push(s);
         if self.print {
-            println!("{}", s);
+            println!("{s}");
         }
     }
     pub fn assert(&self, s: &[&'static str]) {
@@ -36,7 +36,7 @@ impl AssertPass {
         for a in &*self.p.lock().unwrap() {
             while e.is_empty() {
                 if i == s.len() {
-                    panic!("expect finish but `{}`", a);
+                    panic!("expect finish but `{a}`");
                 }
                 e.extend(s[i]);
                 i += 1;
@@ -46,7 +46,7 @@ impl AssertPass {
             } else if e.len() == 1 {
                 panic!("expect `{}` but `{}`", e.iter().next().unwrap(), a);
             } else {
-                panic!("expect one of `{:?}` but `{}`", e, a);
+                panic!("expect one of `{e:?}` but `{a}`");
             }
         }
         loop {
@@ -54,7 +54,7 @@ impl AssertPass {
                 if e.len() == 1 {
                     panic!("expect finish but `{}`", e.iter().next().unwrap());
                 } else {
-                    panic!("expect finish but one of `{:?}`", e);
+                    panic!("expect finish but one of `{e:?}`");
                 }
             }
             if i == s.len() {
