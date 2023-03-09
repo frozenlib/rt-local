@@ -13,6 +13,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
+      - name: Rustup update stable
+        run: rustup update stable
+      - name: Show cargo version
+        run: cargo --version
       - name: Build features-none
         run: cargo build --verbose
       - name: Build features-windows
