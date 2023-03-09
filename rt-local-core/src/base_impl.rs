@@ -5,7 +5,7 @@ use std::{
     future::Future,
     mem::{replace, swap},
     ops::ControlFlow,
-    pin::Pin,
+    pin::{pin, Pin},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -33,7 +33,7 @@ pub fn run<F: Future>(l: &impl RuntimeLoop, future: F) -> F::Output {
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
-    let mut main = Box::pin(future);
+    let mut main = pin!(future);
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     let value = l.run(|| {
         while runner.ready_requests() {
