@@ -9,11 +9,18 @@ pub fn build(
     is_test: bool,
 ) -> Result<TokenStream> {
     if let Ok(mut item_fn) = parse2::<ItemFn>(item) {
-        if !is_test && item_fn.sig.asyncness.is_none() {
-            bail!(
-                item_fn.sig.span(),
-                "the `async` keyword is missing from the function declaration"
-            );
+        if item_fn.sig.asyncness.is_none() {
+            if is_test {
+                return Ok(quote! {
+                    #[::core::prelude::v1::test]
+                    #item_fn
+                });
+            } else {
+                bail!(
+                    item_fn.sig.span(),
+                    "the `async` keyword is missing from the function declaration"
+                );
+            }
         }
         item_fn.sig.asyncness = None;
         let attrs = &item_fn.attrs;

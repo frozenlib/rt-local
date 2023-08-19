@@ -1,4 +1,7 @@
-use rt_local::{runtime::core::test, wait_for_idle};
+use rt_local::{
+    runtime::core::{run, test},
+    wait_for_idle,
+};
 
 #[test]
 async fn test_macro() {
@@ -7,6 +10,11 @@ async fn test_macro() {
 
 #[test]
 fn test_macro_no_async() {}
+
+#[test]
+fn test_macro_no_async_no_runtime() {
+    run(async {})
+}
 
 #[test]
 #[should_panic]
