@@ -17,6 +17,6 @@ description = "Thread local asynchronous runtime working with platform-specific 
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.95", features = ["full"] }
-quote = "1.0.18"
-proc-macro2 = "1.0.39"
+syn = { version = "2.0.29", features = ["full"] }
+quote = "1.0.33"
+proc-macro2 = "1.0.66"

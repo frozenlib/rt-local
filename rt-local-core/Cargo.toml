@@ -16,4 +16,4 @@ description = "Thread local asynchronous runtime working with platform-specific 
 
 [dependencies]
 slabmap = "0.1.1"
-futures-core = "0.3.25"
+futures-core = "0.3.28"
