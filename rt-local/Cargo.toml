@@ -22,7 +22,7 @@ rt-local-macros = { version = "=0.1.0", path = "../rt-local-macros" }
 derive-ex = "0.1.3"
 
 [target.'cfg(windows)'.dependencies.windows]
-version = "0.44.0"
+version = "0.51.1"
 features = [
     "Win32_Foundation",
     "Win32_System_Threading",

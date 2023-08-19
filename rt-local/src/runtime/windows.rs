@@ -67,7 +67,7 @@ struct Waker {
 impl RuntimeWaker for Waker {
     fn wake(&self) {
         unsafe {
-            PostThreadMessageW(self.thread_id, WM_NULL, WPARAM(0), LPARAM(0));
+            let _ = PostThreadMessageW(self.thread_id, WM_NULL, WPARAM(0), LPARAM(0));
         }
     }
 }
