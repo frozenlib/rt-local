@@ -1,6 +1,6 @@
 [package]
 name = "rt-local"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["frozenlib"]
 license = "MIT OR Apache-2.0"
@@ -17,8 +17,8 @@ description = "Thread local asynchronous runtime working with platform-specific 
 windows = ["dep:windows"]
 
 [dependencies]
-rt-local-core = { version = "0.1.0", path = "../rt-local-core" }
-rt-local-macros = { version = "=0.1.0", path = "../rt-local-macros" }
+rt-local-core = { version = "0.1.3", path = "../rt-local-core" }
+rt-local-macros = { version = "=0.1.3", path = "../rt-local-macros" }
 derive-ex = "0.1.4"
 
 [target.'cfg(windows)'.dependencies.windows]
