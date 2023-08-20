@@ -1,6 +1,6 @@
 [package]
 name = "rt-local"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["frozenlib"]
 license = "MIT OR Apache-2.0"
@@ -18,7 +18,7 @@ windows = ["dep:windows"]
 
 [dependencies]
 rt-local-core = { version = "0.1.3", path = "../rt-local-core" }
-rt-local-macros = { version = "=0.1.3", path = "../rt-local-macros" }
+rt-local-macros = { version = "=0.1.4", path = "../rt-local-macros" }
 derive-ex = "0.1.4"
 
 [target.'cfg(windows)'.dependencies.windows]
