@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Executes the specified future and blocks until it completes.
-pub fn run<F: Future>(future: F) -> F::Output {
+pub fn run<T>(future: impl Future<Output = T>) -> T {
     crate::base::run(&NoFrameworkRuntimeLoop::new(), future)
 }
 
