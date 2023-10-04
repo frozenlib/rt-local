@@ -1,4 +1,4 @@
-#![cfg(all(windows, feature = "windows"))]
+#![cfg(all(target_os = "windows", feature = "windows"))]
 use rt_local::runtime::windows::run;
 
 mod test_utils;

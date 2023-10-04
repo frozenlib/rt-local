@@ -41,5 +41,5 @@ pub mod core {
 }
 
 /// Runtime with Windows message loop.
-#[cfg(all(windows, feature = "windows"))]
+#[cfg(all(target_os = "windows", feature = "windows"))]
 pub mod windows;
