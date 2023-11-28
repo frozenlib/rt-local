@@ -1,4 +1,4 @@
-use rt_local_core::base::{on_idle, RuntimeLoop};
+use rt_local_core::base::{idle, EventLoop};
 use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc, task::Wake};
 use windows::Win32::{
     Foundation::{HWND, LPARAM, WPARAM},
@@ -65,7 +65,7 @@ impl WindowsMessageLoop {
         }
     }
 }
-impl RuntimeLoop for WindowsMessageLoop {
+impl EventLoop for WindowsMessageLoop {
     fn waker(&self) -> std::task::Waker {
         self.waker.clone().into()
     }
@@ -77,7 +77,7 @@ impl RuntimeLoop for WindowsMessageLoop {
             let mut msg = MSG::default();
             unsafe {
                 if !PeekMessageW(&mut msg, HWND(0), 0, 0, PM_REMOVE).as_bool() {
-                    if on_idle() {
+                    if idle() {
                         continue;
                     } else {
                         GetMessageW(&mut msg, HWND(0), 0, 0).ok().unwrap();

@@ -16,15 +16,15 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait RuntimeLoop {
+pub trait EventLoop {
     fn waker(&self) -> Waker;
-    fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> T;
+    fn run<T>(&self, poll: impl FnMut() -> ControlFlow<T>) -> T;
 }
 
 /// Execute asynchronous runtime that blocks the current thread.
 ///
 /// If not blocking current thread, use [`enter`] and [`leave`] instead.
-pub fn run<F: Future>(l: &impl RuntimeLoop, future: F) -> F::Output {
+pub fn run<F: Future>(l: &impl EventLoop, future: F) -> F::Output {
     let mut runner = Runner::new(l.waker());
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
@@ -77,7 +77,7 @@ pub fn leave() {
 /// Call [`poll`](std::future::Future::poll) of futures started by [`spawn_local`].
 ///
 /// `poll` is not called for futures that is waiting.
-pub fn on_step() {
+pub fn poll() {
     RUNNER.with(|r| {
         r.borrow_mut()
             .as_mut()
@@ -93,7 +93,7 @@ pub fn on_step() {
 ///
 /// If true is returned, there may still be waiting Futures remaining.
 /// Therefore, to awaken all waiting Futures, this function needs to be called repeatedly until it returns false.
-pub fn on_idle() -> bool {
+pub fn idle() -> bool {
     if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
         on_idle.wake();
         true

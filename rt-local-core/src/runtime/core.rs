@@ -1,4 +1,4 @@
-use crate::base::{on_idle, RuntimeLoop};
+use crate::base::{idle, EventLoop};
 use std::{
     future::Future,
     ops::ControlFlow,
@@ -33,7 +33,7 @@ impl Default for NoFrameworkRuntimeLoop {
     }
 }
 
-impl RuntimeLoop for NoFrameworkRuntimeLoop {
+impl EventLoop for NoFrameworkRuntimeLoop {
     fn waker(&self) -> std::task::Waker {
         self.0.clone().into()
     }
@@ -47,7 +47,7 @@ impl RuntimeLoop for NoFrameworkRuntimeLoop {
                     if let ControlFlow::Break(value) = on_step() {
                         return value;
                     }
-                    if !on_idle() {
+                    if !idle() {
                         break;
                     }
                 }
