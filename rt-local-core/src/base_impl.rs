@@ -16,9 +16,6 @@ use std::{
 const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
-pub trait RuntimeInjector: 'static {
-    fn waker(&self) -> Waker;
-}
 pub trait RuntimeLoop {
     fn waker(&self) -> Waker;
     fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> T;
@@ -28,7 +25,7 @@ pub trait RuntimeLoop {
 ///
 /// If not blocking current thread, use [`enter`] and [`leave`] instead.
 pub fn run<F: Future>(l: &impl RuntimeLoop, future: F) -> F::Output {
-    let mut runner = Runner::new(l.waker(), None);
+    let mut runner = Runner::new(l.waker());
     Runtime::enter(&runner.rc);
     runner.rc.push_wake(ID_MAIN);
 
@@ -64,8 +61,8 @@ thread_local! {
 /// Init asynchronous runtime without blocking the current thread.
 ///
 /// When ending asynchronous runtime, it is necessary to call [`leave`].
-pub fn enter(injector: impl RuntimeInjector) {
-    let runner = Runner::new(injector.waker(), Some(Box::new(injector)));
+pub fn enter(waker: Waker) {
+    let runner = Runner::new(waker);
     Runtime::enter(&runner.rc);
     RUNNER.with(|r| *r.borrow_mut() = Some(runner));
 }
@@ -378,17 +375,15 @@ struct Runner {
     wakes: Vec<usize>,
     drops: Vec<usize>,
     rs: SlabMap<Option<Runnable>>,
-    _injector: Option<Box<dyn RuntimeInjector>>,
 }
 
 impl Runner {
-    fn new(waker: Waker, injector: Option<Box<dyn RuntimeInjector>>) -> Self {
+    fn new(waker: Waker) -> Self {
         Self {
             rc: RequestChannel::new(waker),
             wakes: Vec::new(),
             drops: Vec::new(),
             rs: SlabMap::new(),
-            _injector: injector,
         }
     }
     fn ready_requests(&mut self) -> bool {
