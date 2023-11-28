@@ -1,5 +1,5 @@
-use rt_local_core::base::{on_idle, RuntimeLoop, RuntimeWaker};
-use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc};
+use rt_local_core::base::{on_idle, RuntimeLoop};
+use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc, task::Wake};
 use windows::Win32::{
     Foundation::{HWND, LPARAM, WPARAM},
     System::Threading::GetCurrentThreadId,
@@ -66,8 +66,8 @@ impl WindowsMessageLoop {
     }
 }
 impl RuntimeLoop for WindowsMessageLoop {
-    fn waker(&self) -> Arc<dyn RuntimeWaker> {
-        self.waker.clone()
+    fn waker(&self) -> std::task::Waker {
+        self.waker.clone().into()
     }
     fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
         loop {
@@ -96,8 +96,11 @@ impl RuntimeLoop for WindowsMessageLoop {
 struct Waker {
     thread_id: u32,
 }
-impl RuntimeWaker for Waker {
-    fn wake(&self) {
+impl Wake for Waker {
+    fn wake(self: Arc<Self>) {
+        self.wake_by_ref();
+    }
+    fn wake_by_ref(self: &Arc<Self>) {
         unsafe {
             let _ = PostThreadMessageW(self.thread_id, WM_NULL, WPARAM(0), LPARAM(0));
         }

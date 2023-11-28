@@ -17,15 +17,11 @@ const ID_NULL: usize = usize::MAX;
 const ID_MAIN: usize = usize::MAX - 1;
 
 pub trait RuntimeInjector: 'static {
-    fn waker(&self) -> Arc<dyn RuntimeWaker>;
+    fn waker(&self) -> Waker;
 }
 pub trait RuntimeLoop {
-    fn waker(&self) -> Arc<dyn RuntimeWaker>;
+    fn waker(&self) -> Waker;
     fn run<T>(&self, on_step: impl FnMut() -> ControlFlow<T>) -> T;
-}
-
-pub trait RuntimeWaker: 'static + Send + Sync {
-    fn wake(&self);
 }
 
 /// Execute asynchronous runtime that blocks the current thread.
@@ -125,7 +121,7 @@ pub fn spawn_local<F: Future + 'static>(future: F) -> Task<F::Output> {
             future,
         }));
         if need_wake {
-            rt.rc.0.waker.wake();
+            rt.rc.0.waker.wake_by_ref();
         }
         Task {
             task,
@@ -162,7 +158,7 @@ pub async fn wait_for_idle() {
 struct RequestChannel(Arc<RequestsData>);
 
 impl RequestChannel {
-    fn new(waker: Arc<dyn RuntimeWaker>) -> Self {
+    fn new(waker: Waker) -> Self {
         Self(Arc::new(RequestsData {
             reqs: Mutex::new(RawRequests::new()),
             waker,
@@ -178,7 +174,7 @@ impl RequestChannel {
         let call_wake = d.is_empty();
         f(&mut d);
         if call_wake {
-            self.0.waker.wake();
+            self.0.waker.wake_by_ref();
         }
     }
     fn push_wake(&self, id: usize) {
@@ -195,7 +191,7 @@ impl RequestChannel {
     }
 }
 struct RequestsData {
-    waker: Arc<dyn RuntimeWaker>,
+    waker: Waker,
     reqs: Mutex<RawRequests>,
 }
 
@@ -386,7 +382,7 @@ struct Runner {
 }
 
 impl Runner {
-    fn new(waker: Arc<dyn RuntimeWaker>, injector: Option<Box<dyn RuntimeInjector>>) -> Self {
+    fn new(waker: Waker, injector: Option<Box<dyn RuntimeInjector>>) -> Self {
         Self {
             rc: RequestChannel::new(waker),
             wakes: Vec::new(),

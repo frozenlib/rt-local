@@ -1,8 +1,9 @@
-use crate::base::{on_idle, RuntimeLoop, RuntimeWaker};
+use crate::base::{on_idle, RuntimeLoop};
 use std::{
     future::Future,
     ops::ControlFlow,
     sync::{Arc, Condvar, Mutex},
+    task::Wake,
 };
 
 /// Executes the specified future and blocks until it completes.
@@ -33,8 +34,8 @@ impl Default for NoFrameworkRuntimeLoop {
 }
 
 impl RuntimeLoop for NoFrameworkRuntimeLoop {
-    fn waker(&self) -> Arc<dyn RuntimeWaker> {
-        self.0.clone()
+    fn waker(&self) -> std::task::Waker {
+        self.0.clone().into()
     }
     fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
         let mut is_wake = self.0.is_wake.lock().unwrap();
@@ -58,8 +59,11 @@ impl RuntimeLoop for NoFrameworkRuntimeLoop {
     }
 }
 
-impl RuntimeWaker for Waker {
-    fn wake(&self) {
+impl Wake for Waker {
+    fn wake(self: Arc<Self>) {
+        self.wake_by_ref();
+    }
+    fn wake_by_ref(self: &Arc<Self>) {
         let mut is_wake = self.is_wake.lock().unwrap();
         if !*is_wake {
             *is_wake = true;
