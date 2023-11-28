@@ -28,6 +28,9 @@ pub trait RuntimeWaker: 'static + Send + Sync {
     fn wake(&self);
 }
 
+/// Execute asynchronous runtime that blocks the current thread.
+///
+/// If not blocking current thread, use [`enter`] and [`leave`] instead.
 pub fn run<F: Future>(l: &impl RuntimeLoop, future: F) -> F::Output {
     let mut runner = Runner::new(l.waker(), None);
     Runtime::enter(&runner.rc);
@@ -62,16 +65,25 @@ thread_local! {
     static RUNNER: RefCell<Option<Runner>> = RefCell::new(None);
 }
 
+/// Init asynchronous runtime without blocking the current thread.
+///
+/// When ending asynchronous runtime, it is necessary to call [`leave`].
 pub fn enter(injector: impl RuntimeInjector) {
     let runner = Runner::new(injector.waker(), Some(Box::new(injector)));
     Runtime::enter(&runner.rc);
     RUNNER.with(|r| *r.borrow_mut() = Some(runner));
 }
+
+/// Finish asynchronous runtime initiated by [`enter`].
 pub fn leave() {
     let runner = RUNNER.with(|r| r.borrow_mut().take().expect("runtime is not exists"));
     Runtime::leave();
     drop(runner);
 }
+
+/// Call [`poll`](std::future::Future::poll) of futures started by [`spawn_local`].
+///
+/// `poll` is not called for futures that is waiting.
 pub fn on_step() {
     RUNNER.with(|r| {
         r.borrow_mut()
@@ -80,6 +92,14 @@ pub fn on_step() {
             .step()
     });
 }
+
+/// Awaken one of the waiting futures created by [`wait_for_idle`].
+///
+/// Returns true if a Future is awakened.
+/// Returns false if there is no Future to awaken.
+///
+/// If true is returned, there may still be waiting Futures remaining.
+/// Therefore, to awaken all waiting Futures, this function needs to be called repeatedly until it returns false.
 pub fn on_idle() -> bool {
     if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
         on_idle.wake();
