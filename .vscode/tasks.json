@@ -69,6 +69,7 @@
       "command": "cargo",
       "args": [
         "run",
+        "--all-features",
         "--example",
         "${fileBasenameNoExtension}"
       ],

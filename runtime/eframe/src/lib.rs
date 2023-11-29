@@ -34,9 +34,7 @@ impl App for SimpleApp {
     }
 }
 impl Drop for SimpleApp {
-    fn drop(&mut self) {
-        rt_local_core::base::leave();
-    }
+    fn drop(&mut self) {}
 }
 
 #[non_exhaustive]
