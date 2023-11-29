@@ -27,15 +27,15 @@ async fn main() {
 
 ## Features
 
-| crate feature | module                      | backend                     |
-| ------------- | --------------------------- | --------------------------- |
-|               | [`core`][module_core]       | platform independent        |
-| `windows`     | [`windows`][module_windows] | windows message loop        |
-| `eframe`      | [`eframe`][module_eframe]   | [eframe] ([egui] fraemwork) |
+| crate feature | module                        | backend                     |
+| ------------- | ----------------------------- | --------------------------- |
+|               | [`blocking`][module_blocking] | no framework                |
+| `windows`     | [`windows`][module_windows]   | windows message loop        |
+| `eframe`      | [`eframe`][module_eframe]     | [eframe] ([egui] fraemwork) |
 
 [eframe]: https://crates.io/crates/eframe
 [egui]: https://crates.io/crates/egui
-[module_core]: https://docs.rs/rt-local/latest/rt_local/runtime/core/
+[module_blocking]: https://docs.rs/rt-local/latest/rt_local/runtime/blocking/
 [module_windows]: https://docs.rs/rt-local/latest/rt_local/runtime/windows/
 [module_eframe]: https://docs.rs/rt-local/latest/rt_local/runtime/eframe/
 
