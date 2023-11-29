@@ -82,7 +82,7 @@ pub fn poll() {
         r.borrow_mut()
             .as_mut()
             .expect("runtime is not exists")
-            .step()
+            .poll()
     });
 }
 
@@ -404,7 +404,7 @@ impl Runner {
         }
     }
 
-    fn step(&mut self) {
+    fn poll(&mut self) {
         while self.ready_requests() {
             for id in self.wakes.drain(..) {
                 run_item(&mut self.rs[id]);
