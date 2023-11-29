@@ -1,4 +1,4 @@
-use rt_local::{runtime::core::run, spawn_local, wait_for_idle, Task};
+use rt_local::{runtime::blocking::run, spawn_local, wait_for_idle, Task};
 use std::cell::RefCell;
 
 mod test_utils;

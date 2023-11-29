@@ -11,7 +11,7 @@ use windows::Win32::{
 
 /// Executes the specified future and blocks until it completes.
 pub fn run<T>(future: impl Future<Output = T>) -> T {
-    rt_local_core::base::run(&WindowsMessageLoop::new(), future)
+    rt_local_core::base::run(&WindowsEventLoop::new(), future)
 }
 
 /// Mark the asynchronous function as a the entry point.
@@ -49,12 +49,12 @@ pub use rt_local_macros::windows_main as main;
 /// ```
 pub use rt_local_macros::windows_test as test;
 
-struct WindowsMessageLoop {
+struct WindowsEventLoop {
     waker: Arc<Waker>,
     _not_send: PhantomData<*mut ()>,
 }
 
-impl WindowsMessageLoop {
+impl WindowsEventLoop {
     fn new() -> Self {
         unsafe {
             let thread_id = GetCurrentThreadId();
@@ -65,13 +65,13 @@ impl WindowsMessageLoop {
         }
     }
 }
-impl EventLoop for WindowsMessageLoop {
+impl EventLoop for WindowsEventLoop {
     fn waker(&self) -> std::task::Waker {
         self.waker.clone().into()
     }
-    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
+    fn run<T>(&self, mut poll: impl FnMut() -> ControlFlow<T>) -> T {
         loop {
-            if let ControlFlow::Break(value) = on_step() {
+            if let ControlFlow::Break(value) = poll() {
                 return value;
             }
             let mut msg = MSG::default();

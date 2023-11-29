@@ -1,5 +1,5 @@
 use rt_local::{
-    runtime::core::{run, test},
+    runtime::blocking::{run, test},
     wait_for_idle,
 };
 

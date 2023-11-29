@@ -7,5 +7,5 @@ pub mod base {
 }
 /// Runtime implementations.
 pub mod runtime {
-    pub mod core;
+    pub mod blocking;
 }

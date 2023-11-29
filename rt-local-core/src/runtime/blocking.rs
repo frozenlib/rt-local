@@ -8,17 +8,17 @@ use std::{
 
 /// Executes the specified future and blocks until it completes.
 pub fn run<T>(future: impl Future<Output = T>) -> T {
-    crate::base::run(&NoFrameworkRuntimeLoop::new(), future)
+    crate::base::run(&BlockingEventLoop::new(), future)
 }
 
-struct NoFrameworkRuntimeLoop(Arc<Waker>);
+struct BlockingEventLoop(Arc<Waker>);
 
 struct Waker {
     is_wake: Mutex<bool>,
     cv: Condvar,
 }
 
-impl NoFrameworkRuntimeLoop {
+impl BlockingEventLoop {
     pub fn new() -> Self {
         Self(Arc::new(Waker {
             is_wake: Mutex::new(true),
@@ -27,33 +27,31 @@ impl NoFrameworkRuntimeLoop {
     }
 }
 
-impl Default for NoFrameworkRuntimeLoop {
+impl Default for BlockingEventLoop {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl EventLoop for NoFrameworkRuntimeLoop {
+impl EventLoop for BlockingEventLoop {
     fn waker(&self) -> std::task::Waker {
         self.0.clone().into()
     }
-    fn run<T>(&self, mut on_step: impl FnMut() -> ControlFlow<T>) -> T {
+    fn run<T>(&self, mut poll: impl FnMut() -> ControlFlow<T>) -> T {
         let mut is_wake = self.0.is_wake.lock().unwrap();
         loop {
-            if *is_wake {
+            is_wake = if *is_wake {
                 *is_wake = false;
                 drop(is_wake);
-                loop {
-                    if let ControlFlow::Break(value) = on_step() {
+                while {
+                    if let ControlFlow::Break(value) = poll() {
                         return value;
                     }
-                    if !idle() {
-                        break;
-                    }
-                }
-                is_wake = self.0.is_wake.lock().unwrap()
+                    idle()
+                } {}
+                self.0.is_wake.lock().unwrap()
             } else {
-                is_wake = self.0.cv.wait(is_wake).unwrap();
+                self.0.cv.wait(is_wake).unwrap()
             }
         }
     }

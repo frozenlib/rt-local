@@ -9,13 +9,15 @@ mod runtime_main;
 use runtime_main::build;
 
 #[proc_macro_attribute]
-pub fn core_test(attr: TokenStream, item: TokenStream) -> TokenStream {
-    resolve_attr(attr, item, |attr, item| build(attr, item, "core", true))
+pub fn blocking_test(attr: TokenStream, item: TokenStream) -> TokenStream {
+    resolve_attr(attr, item, |attr, item| build(attr, item, "blocking", true))
 }
 
 #[proc_macro_attribute]
-pub fn core_main(attr: TokenStream, item: TokenStream) -> TokenStream {
-    resolve_attr(attr, item, |attr, item| build(attr, item, "core", false))
+pub fn blocking_main(attr: TokenStream, item: TokenStream) -> TokenStream {
+    resolve_attr(attr, item, |attr, item| {
+        build(attr, item, "blocking", false)
+    })
 }
 
 #[proc_macro_attribute]

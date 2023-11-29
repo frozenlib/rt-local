@@ -10,7 +10,7 @@ Thread local asynchronous runtime working with platform-specific event loops.
 
 ```rust
 use rt_local::spawn_local;
-use rt_local::runtime::core::main;
+use rt_local::runtime::blocking::main;
 
 #[main]
 async fn main() {

@@ -1,7 +1,7 @@
 /// Platform-independent runtime.
-pub mod core {
+pub mod blocking {
 
-    pub use rt_local_core::runtime::core::*;
+    pub use rt_local_core::runtime::blocking::*;
 
     /// Mark the asynchronous function as a entry point.
     ///
@@ -10,12 +10,12 @@ pub mod core {
     /// # Examples
     ///
     /// ```
-    /// #[rt_local::runtime::core::main]
+    /// #[rt_local::runtime::blocking::main]
     /// async fn main() {
     ///     // ...
     /// }
     /// ```
-    pub use rt_local_macros::core_main as main;
+    pub use rt_local_macros::blocking_main as main;
 
     /// Mark the function as a test.
     ///
@@ -25,7 +25,7 @@ pub mod core {
     /// # Examples
     ///
     /// ```
-    /// use rt_local::runtime::core::test;
+    /// use rt_local::runtime::blocking::test;
     ///
     /// #[test]
     /// async fn test_async() {
@@ -37,7 +37,7 @@ pub mod core {
     ///     // ..
     /// }
     /// ```
-    pub use rt_local_macros::core_test as test;
+    pub use rt_local_macros::blocking_test as test;
 }
 
 /// Runtime with Windows message loop.
