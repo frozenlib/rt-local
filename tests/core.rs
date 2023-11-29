@@ -18,7 +18,7 @@ fn assert_counter(value: usize) {
 
 #[test]
 fn run_repeat() {
-    fn spwan_local_increment() -> Task<()> {
+    fn spawn_local_increment() -> Task<()> {
         spawn_local(async {
             increment();
         })
@@ -26,16 +26,16 @@ fn run_repeat() {
 
     COUNTER.with(|c| *c.borrow_mut() = 0);
     run(async {
-        let _t = spwan_local_increment();
-        let _t = spwan_local_increment();
+        let _t = spawn_local_increment();
+        let _t = spawn_local_increment();
         wait_for_idle().await;
     });
     assert_counter(2);
 
     run(async {
-        let _t = spwan_local_increment();
-        let _t = spwan_local_increment();
-        let _t = spwan_local_increment();
+        let _t = spawn_local_increment();
+        let _t = spawn_local_increment();
+        let _t = spawn_local_increment();
         wait_for_idle().await;
     });
     assert_counter(5);

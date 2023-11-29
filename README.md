@@ -31,7 +31,7 @@ async fn main() {
 | ------------- | ----------------------------- | --------------------------- |
 |               | [`blocking`][module_blocking] | no framework                |
 | `windows`     | [`windows`][module_windows]   | windows message loop        |
-| `eframe`      | [`eframe`][module_eframe]     | [eframe] ([egui] fraemwork) |
+| `eframe`      | [`eframe`][module_eframe]     | [eframe] ([egui] framework) |
 
 [eframe]: https://crates.io/crates/eframe
 [egui]: https://crates.io/crates/egui
