@@ -1,7 +1,6 @@
 use slabmap::SlabMap;
 use std::{
     cell::RefCell,
-    collections::VecDeque,
     future::Future,
     mem::{replace, swap},
     ops::ControlFlow,
@@ -32,22 +31,21 @@ pub fn run<F: Future>(l: &impl EventLoop, future: F) -> F::Output {
     let mut main = pin!(future);
     let main_wake = TaskWake::new(ID_MAIN, &runner.rc);
     let value = l.run(|| {
-        while runner.ready_requests() {
-            for id in runner.wakes.drain(..) {
-                if id == ID_MAIN {
-                    match main
-                        .as_mut()
-                        .poll(&mut Context::from_waker(&main_wake.waker()))
-                    {
-                        Poll::Ready(value) => return ControlFlow::Break(value),
-                        Poll::Pending => {}
-                    }
-                } else {
-                    run_item(&mut runner.rs[id]);
+        runner.ready_requests();
+        for id in runner.wakes.drain(..) {
+            if id == ID_MAIN {
+                match main
+                    .as_mut()
+                    .poll(&mut Context::from_waker(&main_wake.waker()))
+                {
+                    Poll::Ready(value) => return ControlFlow::Break(value),
+                    Poll::Pending => {}
                 }
+            } else {
+                run_item(&mut runner.rs[id]);
             }
-            runner.apply_drops();
         }
+        runner.apply_drops();
         ControlFlow::Continue(())
     });
     Runtime::leave();
@@ -76,30 +74,26 @@ pub fn leave() {
 
 /// Call [`poll`](std::future::Future::poll) of futures started by [`spawn_local`].
 ///
-/// `poll` is not called for futures that is waiting.
+/// `Future::poll` is called for all futures that were woken up before the call to this function.
+///
+/// `Future::poll` is not called for futures that were woken up during the call to this function.
 pub fn poll() {
-    RUNNER.with(|r| {
-        r.borrow_mut()
-            .as_mut()
-            .expect("runtime is not exists")
-            .poll()
-    });
+    call_runner(|r| r.poll())
+}
+
+fn call_runner<T>(f: impl FnOnce(&mut Runner) -> T) -> T {
+    RUNNER
+        .with(|r| r.borrow_mut().as_mut().map(f))
+        .expect("runtime is not start by `enter()`")
 }
 
 /// Awaken one of the waiting futures created by [`wait_for_idle`].
 ///
-/// Returns true if a Future is awakened.
-/// Returns false if there is no Future to awaken.
+/// If there are tasks waken up, does nothing and returns true.
 ///
-/// If true is returned, there may still be waiting Futures remaining.
-/// Therefore, to awaken all waiting Futures, this function needs to be called repeatedly until it returns false.
+/// If there are no tasks woken up, resumes all tasks suspended by wait_for_idle, and returns true if one or more tasks have been resumed.
 pub fn idle() -> bool {
-    if let Some(on_idle) = Runtime::with(|rt| rt.rc.pop_on_idle()) {
-        on_idle.wake();
-        true
-    } else {
-        false
-    }
+    Runtime::with(|rt| rt.wake_idles())
 }
 
 /// Spawn a future on the current thread.
@@ -142,7 +136,7 @@ pub async fn wait_for_idle() {
                 Poll::Ready(())
             } else {
                 self.is_ready = true;
-                Runtime::with(|rt| rt.rc.push_on_idle(cx.waker().clone()));
+                Runtime::with(|rt| rt.rc.push_idle_waker(cx.waker().clone()));
                 Poll::Pending
             }
         }
@@ -161,11 +155,18 @@ impl RequestChannel {
             waker,
         }))
     }
-    fn swap(&self, wakes: &mut Vec<usize>, drops: &mut Vec<usize>) {
-        let mut d = self.0.reqs.lock().unwrap();
-        swap(wakes, &mut d.wakes);
-        swap(drops, &mut d.drops);
+    fn get_wakes_drops(&self, wakes: &mut Vec<usize>, drops: &mut Vec<usize>) {
+        assert!(wakes.is_empty());
+        assert!(drops.is_empty());
+        let mut reqs = self.0.reqs.lock().unwrap();
+        swap(wakes, &mut reqs.wakes);
+        swap(drops, &mut reqs.drops);
     }
+    fn get_idles(&self, idles: &mut Vec<Waker>) {
+        assert!(idles.is_empty());
+        swap(idles, &mut self.0.reqs.lock().unwrap().idles);
+    }
+
     fn push_with(&self, f: impl FnOnce(&mut RawRequests)) {
         let mut d = self.0.reqs.lock().unwrap();
         let call_wake = d.is_empty();
@@ -180,13 +181,11 @@ impl RequestChannel {
     fn push_drop(&self, id: usize) {
         self.push_with(|d| d.drops.push(id));
     }
-    fn push_on_idle(&self, waker: Waker) {
-        self.push_with(|d| d.on_idle.push_back(waker));
-    }
-    fn pop_on_idle(&self) -> Option<Waker> {
-        self.0.reqs.lock().unwrap().on_idle.pop_front()
+    fn push_idle_waker(&self, waker: Waker) {
+        self.push_with(|d| d.idles.push(waker));
     }
 }
+
 struct RequestsData {
     waker: Waker,
     reqs: Mutex<RawRequests>,
@@ -195,7 +194,7 @@ struct RequestsData {
 struct RawRequests {
     wakes: Vec<usize>,
     drops: Vec<usize>,
-    on_idle: VecDeque<Waker>,
+    idles: Vec<Waker>,
 }
 
 impl RawRequests {
@@ -203,11 +202,11 @@ impl RawRequests {
         Self {
             wakes: Vec::new(),
             drops: Vec::new(),
-            on_idle: VecDeque::new(),
+            idles: Vec::new(),
         }
     }
     fn is_empty(&self) -> bool {
-        self.wakes.is_empty() && self.drops.is_empty() && self.on_idle.is_empty()
+        self.wakes.is_empty() && self.drops.is_empty() && self.idles.is_empty()
     }
 }
 
@@ -218,11 +217,16 @@ thread_local! {
 struct Runtime {
     rc: RequestChannel,
     rs: Vec<Pin<Box<dyn DynRunnable>>>,
+    idles: Vec<Waker>,
 }
 
 impl Runtime {
     fn new(rc: RequestChannel) -> Self {
-        Self { rc, rs: Vec::new() }
+        Self {
+            rc,
+            rs: Vec::new(),
+            idles: Vec::new(),
+        }
     }
     fn enter(rc: &RequestChannel) {
         RUNTIME.with(|rt| {
@@ -235,6 +239,19 @@ impl Runtime {
     }
     fn leave() {
         RUNTIME.with(|rt| rt.borrow_mut().take());
+    }
+    fn wake_idles(&mut self) -> bool {
+        if !self.rs.is_empty() {
+            return true;
+        }
+        self.rc.get_idles(&mut self.idles);
+        if self.idles.is_empty() {
+            return false;
+        }
+        for waker in self.idles.drain(..) {
+            waker.wake();
+        }
+        true
     }
     #[track_caller]
     fn with<T>(f: impl FnOnce(&mut Self) -> T) -> T {
@@ -386,8 +403,8 @@ impl Runner {
             rs: SlabMap::new(),
         }
     }
-    fn ready_requests(&mut self) -> bool {
-        self.rc.swap(&mut self.wakes, &mut self.drops);
+    fn ready_requests(&mut self) {
+        self.rc.get_wakes_drops(&mut self.wakes, &mut self.drops);
         Runtime::with(|rt| {
             for r in rt.rs.drain(..) {
                 self.wakes.push(
@@ -396,7 +413,6 @@ impl Runner {
                 );
             }
         });
-        !self.wakes.is_empty() || !self.drops.is_empty()
     }
     fn apply_drops(&mut self) {
         for id in self.drops.drain(..) {
@@ -405,12 +421,11 @@ impl Runner {
     }
 
     fn poll(&mut self) {
-        while self.ready_requests() {
-            for id in self.wakes.drain(..) {
-                run_item(&mut self.rs[id]);
-            }
-            self.apply_drops();
+        self.ready_requests();
+        for id in self.wakes.drain(..) {
+            run_item(&mut self.rs[id]);
         }
+        self.apply_drops();
     }
 }
 

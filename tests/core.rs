@@ -12,6 +12,7 @@ thread_local! {
 fn increment() {
     COUNTER.with(|c| *c.borrow_mut() += 1);
 }
+#[track_caller]
 fn assert_counter(value: usize) {
     assert_eq!(COUNTER.with(|c| *c.borrow()), value);
 }

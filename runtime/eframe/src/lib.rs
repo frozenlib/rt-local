@@ -38,21 +38,20 @@ impl Drop for SimpleApp {
 }
 
 #[non_exhaustive]
-pub struct RtLocalRuntime {}
+pub struct RtLocalRuntime(Context);
 
 impl RtLocalRuntime {
     pub fn new(ctx: &CreationContext) -> Self {
         rt_local_core::base::enter(Arc::new(EguiWake(ctx.egui_ctx.clone())).into());
-        Self {}
+        Self(ctx.egui_ctx.clone())
     }
     pub fn before_update(&self) {
         rt_local_core::base::poll();
     }
     pub fn after_update(&self) {
-        while {
-            rt_local_core::base::poll();
-            rt_local_core::base::idle()
-        } {}
+        if self.0.has_requested_repaint() {
+            rt_local_core::base::idle();
+        }
     }
 }
 impl Drop for RtLocalRuntime {
