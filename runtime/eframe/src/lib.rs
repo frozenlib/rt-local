@@ -1,4 +1,4 @@
-use std::{sync::Arc, task::Wake};
+use std::{marker::PhantomData, sync::Arc, task::Wake};
 
 use eframe::{run_native, App, CreationContext, Frame, NativeOptions, Result};
 use egui::Context;
@@ -37,19 +37,27 @@ impl Drop for SimpleApp {
     fn drop(&mut self) {}
 }
 
-#[non_exhaustive]
-pub struct RtLocalRuntime(Context);
+#[derive(Default)]
+struct PhantomNotSend(PhantomData<*mut ()>);
+
+pub struct RtLocalRuntime {
+    ctx: Context,
+    _not_send: PhantomNotSend,
+}
 
 impl RtLocalRuntime {
     pub fn new(ctx: &CreationContext) -> Self {
         rt_local_core::base::enter(Arc::new(EguiWake(ctx.egui_ctx.clone())).into());
-        Self(ctx.egui_ctx.clone())
+        Self {
+            ctx: ctx.egui_ctx.clone(),
+            _not_send: PhantomNotSend::default(),
+        }
     }
     pub fn before_update(&self) {
         rt_local_core::base::poll();
     }
     pub fn after_update(&self) {
-        if self.0.has_requested_repaint() {
+        if self.ctx.has_requested_repaint() {
             rt_local_core::base::idle();
         }
     }
