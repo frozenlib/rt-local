@@ -1,4 +1,4 @@
-/// Platform-independent runtime.
+/// Runtime without framework.
 pub mod blocking;
 
 /// Runtime with Windows message loop.
