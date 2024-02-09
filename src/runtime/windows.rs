@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 pub use rt_local_runtime_windows::*;
 
 /// Mark the asynchronous function as a the entry point.

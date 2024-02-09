@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 pub use rt_local_core::runtime::blocking::*;
 
 /// Mark the asynchronous function as a entry point.
