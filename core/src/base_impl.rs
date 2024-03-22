@@ -53,7 +53,7 @@ pub fn run<F: Future>(l: &impl EventLoop, future: F) -> F::Output {
 }
 
 thread_local! {
-    static RUNNER: RefCell<Option<Runner>> = RefCell::new(None);
+    static RUNNER: RefCell<Option<Runner>> = const { RefCell::new(None) };
 }
 
 /// Init asynchronous runtime without blocking the current thread.
@@ -211,7 +211,7 @@ impl RawRequests {
 }
 
 thread_local! {
-    static RUNTIME: RefCell<Option<Runtime>> = RefCell::new(None);
+    static RUNTIME: RefCell<Option<Runtime>> = const { RefCell::new(None) };
 }
 
 struct Runtime {

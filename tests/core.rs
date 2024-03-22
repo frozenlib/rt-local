@@ -7,7 +7,7 @@ mod common {
 }
 
 thread_local! {
-    static COUNTER: RefCell<usize> = RefCell::new(0);
+    static COUNTER: RefCell<usize> = const { RefCell::new(0) };
 }
 fn increment() {
     COUNTER.with(|c| *c.borrow_mut() += 1);
