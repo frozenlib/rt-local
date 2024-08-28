@@ -1,3 +1,5 @@
+#![cfg(target_os = "windows")]
+
 use rt_local_core::base::{idle, EventLoop};
 use std::{
     future::Future, marker::PhantomData, ops::ControlFlow, ptr::null_mut, sync::Arc, task::Wake,
