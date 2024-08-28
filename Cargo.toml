@@ -25,11 +25,11 @@ rt-local-runtime-windows = { version = "0.1.0", path = "runtime/windows", option
 rt-local-runtime-eframe = { version = "0.1.0", path = "runtime/eframe", optional = true }
 
 [dev-dependencies]
-derive-ex = "0.1.7"
+derive-ex = "0.1.8"
 async-std = "1.12.0"
-tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread", "time"] }
-egui = "0.26.2"
-eframe = "0.26.2"
+tokio = { version = "1.39.3", features = ["macros", "rt-multi-thread", "time"] }
+egui = "0.28.1"
+eframe = "0.28.1"
 
 [[example]]
 name = "eframe_run_simple_native"
