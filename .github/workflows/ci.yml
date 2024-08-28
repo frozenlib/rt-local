@@ -3,7 +3,7 @@ name: CI
 on:
   push:
   pull_request:
-  schedule: [cron: "20 5 * * *"]
+  schedule: [cron: "20 10 * * *"]
 
 jobs:
   build:
@@ -12,7 +12,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rustup update stable
         run: rustup update stable
       - name: Show cargo version
@@ -27,15 +27,20 @@ jobs:
         run: cargo test --verbose --all-features --no-run
       - name: Run tests
         run: cargo test --verbose --all-features
+      # - name: Run compile fail tests
+      #   run: cargo test --test compile_fail --verbose -- --ignored
       - name: Clippy
         run: cargo clippy --all-features --tests --lib -- -W clippy::all
         env:
           RUSTFLAGS: -D warnings
       - name: Rustup toolchain install nightly
-        run: rustup toolchain install nightly
+        run: rustup toolchain install nightly --allow-downgrade --profile minimal
       - name: Set minimal versions
         run: cargo +nightly update -Z direct-minimal-versions
       - name: Build tests (minimal versions)
-        run: cargo +stable test --all-features --verbose --no-run
+        run: cargo test --all-features --verbose --no-run
       - name: Run tests (minimal versions)
-        run: cargo +stable test --all-features --verbose
+        run: cargo test --all-features --verbose
+      # - uses: taiki-e/install-action@cargo-hack
+      # - name: Check msrv
+      #   run: cargo hack test --rust-version --workspace --all-targets --ignore-private
