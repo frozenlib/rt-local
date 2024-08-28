@@ -14,7 +14,7 @@ pub fn run_simple_native(
         Box::new(|ctx| {
             let rt = RtLocalRuntime::new(ctx);
             let update = Box::new(update_fun);
-            Box::new(SimpleApp { rt, update })
+            Ok(Box::new(SimpleApp { rt, update }))
         }),
     )?;
     Ok(())
