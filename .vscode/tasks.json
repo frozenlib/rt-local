@@ -2,43 +2,28 @@
   // See https://go.microsoft.com/fwlink/?LinkId=733558
   // for the documentation about the tasks.json format
   "version": "2.0.0",
+  "options": {
+    "env": {
+      // "RUST_BACKTRACE": "1",
+    },
+  },
+  "presentation": {
+    "panel": "dedicated",
+    "clear": true,
+  },
   "tasks": [
     {
+      // Needed for run (F5)
       "type": "shell",
       "label": "cargo build",
       "command": "cargo",
       "args": [
         "build",
-        "--all-features"
+        "--all-features",
       ],
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
-      // "options": {
-      //     "env": {
-      //         "RUST_BACKTRACE": "1",
-      //     }
-      // }
-    },
-    {
-      "type": "shell",
-      "label": "cargo build release",
-      "command": "cargo",
-      "args": [
-        "build",
-        "--release"
-      ],
-      "problemMatcher": [
-        "$rustc"
-      ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -46,7 +31,8 @@
       "command": "cargo",
       "args": [
         "test",
-        "--all-features"
+        "--all-features",
+        "--all-targets",
       ],
       "problemMatcher": [
         "$rustc"
@@ -55,13 +41,45 @@
         "kind": "build",
         "isDefault": true
       },
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      },
-      "dependsOn": [
-        "include doc"
+    },
+    {
+      "type": "shell",
+      "label": "cargo watch test",
+      "command": "cargo-watch",
+      "args": [
+        "-c",
+        "-x",
+        "test",
+        "--all-features",
+        "--all-targets",
+        // "nextest run",
+        // "nextest run -p {project} --test {file} -- {module}",        
       ],
+      "problemMatcher": [],
+    },
+    {
+      "type": "shell",
+      "label": "cargo watch run",
+      "command": "cargo-watch",
+      "args": [
+        "-c",
+        "-x",
+        "run",
+      ],
+      "problemMatcher": [],
+    },
+    {
+      "type": "shell",
+      "label": "cargo watch run with windows terminal",
+      "command": "wt",
+      "args": [
+        "new-tab",
+        "cargo-watch",
+        "-c",
+        "-x",
+        "run",
+      ],
+      "problemMatcher": [],
     },
     {
       "type": "shell",
@@ -69,17 +87,21 @@
       "command": "cargo",
       "args": [
         "run",
-        "--all-features",
         "--example",
         "${fileBasenameNoExtension}"
       ],
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
+    },
+    {
+      "type": "shell",
+      "label": "watch example",
+      "command": "watchexec -c --restart -- cargo run --example ${fileBasenameNoExtension}",
+      "args": [],
+      "problemMatcher": [
+        "$rustc"
+      ],
     },
     {
       "type": "shell",
@@ -94,13 +116,25 @@
       "problemMatcher": [
         "$rustc"
       ],
+      "dependsOn": [
+        "rustdoc-include"
+      ],
+    },
+    {
+      "type": "shell",
+      "label": "cargo llvm-cov open",
+      "command": "cargo",
+      "args": [
+        "llvm-cov",
+        "--open",
+      ],
+      "problemMatcher": [
+        "$rustc"
+      ],
       "presentation": {
         "panel": "dedicated",
         "clear": true
       },
-      "dependsOn": [
-        "include doc"
-      ],
     },
     {
       "type": "shell",
@@ -109,8 +143,7 @@
       "args": [
         "clippy",
         "--all-features",
-        "--tests",
-        "--lib",
+        "--all-targets",
         "--",
         "-W",
         "clippy::all"
@@ -118,22 +151,15 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
       "label": "cargo fix & fmt",
-      "command": "cargo fix && cargo fmt",
+      "command": "cargo fix --all-features --all-targets --allow-dirty && cargo clippy --fix --allow-dirty --all-features --all-targets && cargo fmt",
+      "args": [],
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true,
-      }
     },
     {
       "type": "shell",
@@ -148,10 +174,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -166,10 +188,6 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
     {
       "type": "shell",
@@ -185,49 +203,20 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      },
       "options": {
         "env": {
-          "TRYBUILD": "overwrite"
+          "TRYBUILD": "overwrite",
         }
       }
     },
     {
       "type": "shell",
-      "label": "include doc",
-      "command": "include-doc",
-      "args": [
-        "${workspaceFolder}"
-      ],
+      "label": "check msrv",
+      "command": "cargo hack test --rust-version --workspace --all-targets --ignore-private",
+      "args": [],
       "problemMatcher": [
-        {
-          "owner": "include-doc",
-          "fileLocation": [
-            "relative",
-            "${workspaceFolder}"
-          ],
-          "pattern": [
-            {
-              "regexp": "^(error): (.*)$",
-              "severity": 1,
-              "message": 2,
-            },
-            {
-              "regexp": "^--> (.*):(\\d+)\\s*$",
-              "file": 1,
-              "line": 2,
-              "loop": true,
-            },
-          ]
-        },
+        "$rustc"
       ],
-      "presentation": {
-        "panel": "dedicated",
-        "clear": true
-      }
     },
-  ]
+  ],
 }
