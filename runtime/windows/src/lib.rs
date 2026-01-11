@@ -1,11 +1,9 @@
 #![cfg(target_os = "windows")]
 
 use rt_local_core::base::{idle, EventLoop};
-use std::{
-    future::Future, marker::PhantomData, ops::ControlFlow, ptr::null_mut, sync::Arc, task::Wake,
-};
+use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc, task::Wake};
 use windows::Win32::{
-    Foundation::{HWND, LPARAM, WPARAM},
+    Foundation::{LPARAM, WPARAM},
     System::Threading::GetCurrentThreadId,
     UI::WindowsAndMessaging::{
         DispatchMessageW, GetMessageW, PeekMessageW, PostThreadMessageW, TranslateMessage, MSG,
@@ -45,11 +43,11 @@ impl EventLoop for WindowsEventLoop {
             }
             let mut msg = MSG::default();
             unsafe {
-                if !PeekMessageW(&mut msg, HWND(null_mut()), 0, 0, PM_REMOVE).as_bool() {
+                if !PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                     if idle() {
                         continue;
                     } else {
-                        GetMessageW(&mut msg, HWND(null_mut()), 0, 0).ok().unwrap();
+                        GetMessageW(&mut msg, None, 0, 0).ok().unwrap();
                     }
                 }
                 if msg.message == WM_QUIT {
