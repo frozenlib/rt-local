@@ -14,6 +14,10 @@ fn test_run() {
 }
 
 #[test]
+#[cfg_attr(
+    all(miri, target_os = "windows"),
+    ignore = "async-std timer calls GetModuleHandleW, unsupported by Miri"
+)]
 fn test_sleep() {
     let mut executed = false;
     run(async {
@@ -24,6 +28,10 @@ fn test_sleep() {
 }
 
 #[test]
+#[cfg_attr(
+    all(miri, target_os = "windows"),
+    ignore = "async-std timer calls GetModuleHandleW, unsupported by Miri"
+)]
 fn test_spawn_local() {
     let p = AssertPass::new();
     run(async {
@@ -39,6 +47,10 @@ fn test_spawn_local() {
 }
 
 #[test]
+#[cfg_attr(
+    all(miri, target_os = "windows"),
+    ignore = "async-std timer calls GetModuleHandleW, unsupported by Miri"
+)]
 fn test_cancel() {
     let p = AssertPass::new();
     run(async {
@@ -53,6 +65,10 @@ fn test_cancel() {
 }
 
 #[test]
+#[cfg_attr(
+    all(miri, target_os = "windows"),
+    ignore = "async-std timer calls GetModuleHandleW, unsupported by Miri"
+)]
 fn test_detach() {
     let p = AssertPass::new();
     run(async {
