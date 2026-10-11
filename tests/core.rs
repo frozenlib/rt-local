@@ -41,3 +41,27 @@ fn run_repeat() {
     });
     assert_counter(5);
 }
+
+#[test]
+fn mutable_borrow_across_await() {
+    run(async {
+        spawn_local(async {
+            let mut value = 0;
+            let borrowed = &mut value;
+            let mut first_poll = true;
+            // Suspend once so the runtime polls a future containing a live mutable borrow again.
+            std::future::poll_fn(|cx| {
+                if std::mem::replace(&mut first_poll, false) {
+                    cx.waker().wake_by_ref();
+                    std::task::Poll::Pending
+                } else {
+                    std::task::Poll::Ready(())
+                }
+            })
+            .await;
+            *borrowed += 1;
+            assert_eq!(*borrowed, 1);
+        })
+        .await;
+    });
+}
