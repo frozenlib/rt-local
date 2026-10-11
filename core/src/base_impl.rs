@@ -370,11 +370,13 @@ impl<Fut: Future> DynRunnable for RawRunnable<Fut> {
         }
     }
     fn run(self: Pin<&mut Self>, waker: &Waker) -> bool {
-        if self.task.is_cancelled() {
-            false
-        } else {
-            unsafe {
-                let this = self.get_unchecked_mut();
+        unsafe {
+            // SAFETY: Neither `Self` nor `future` is moved; `future` stays pinned until dropped.
+            let this = self.get_unchecked_mut();
+            // Borrow only `task` so references stored in the suspended future remain valid.
+            if this.task.is_cancelled() {
+                false
+            } else {
                 let f = Pin::new_unchecked(&mut this.future);
                 if let Poll::Ready(value) = f.poll(&mut Context::from_waker(waker)) {
                     this.task.complete(value);
